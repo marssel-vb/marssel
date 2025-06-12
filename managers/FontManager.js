@@ -46,6 +46,8 @@ export class FontManager {
 
     async loadManifest(retryCount = 0) {
         try {
+            console.log("🔍 Loading manifest from:", this.config.manifestUrl);
+
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 5000);
 
@@ -56,18 +58,51 @@ export class FontManager {
 
             clearTimeout(timeoutId);
 
+            console.log("📡 Response status:", response.status);
+            console.log("📡 Response headers:", [
+                ...response.headers.entries(),
+            ]);
+
             if (!response.ok) {
                 throw new Error(
                     `HTTP ${response.status}: ${response.statusText}`
                 );
             }
 
-            this.state.manifest = await response.json();
+            const responseText = await response.text();
+            console.log("📄 Response text length:", responseText.length);
+            console.log("📄 Response text:", responseText);
+            console.log("📄 First 100 chars:", responseText.substring(0, 100));
+
+            // Vérifier si la réponse est vide ou contient seulement des espaces
+            if (!responseText || responseText.trim() === "") {
+                console.warn("⚠️ Empty response received");
+                this.state.manifest = {};
+                return;
+            }
+
+            // Tenter de parser le JSON
+            try {
+                this.state.manifest = JSON.parse(responseText);
+                console.log(
+                    "✅ JSON parsed successfully:",
+                    this.state.manifest
+                );
+            } catch (jsonError) {
+                console.error("❌ JSON parsing failed:", jsonError);
+                console.error("❌ Problematic text:", responseText);
+                throw jsonError;
+            }
+
             this.validateManifest();
         } catch (error) {
+            console.error("💥 Error details:", error);
+            console.error("💥 Error type:", error.constructor.name);
+            console.error("💥 Error message:", error.message);
+
             if (retryCount < this.config.maxRetries) {
                 console.warn(
-                    `Manifest load attempt ${
+                    `🔄 Manifest load attempt ${
                         retryCount + 1
                     } failed, retrying...`,
                     error.message
@@ -77,9 +112,10 @@ export class FontManager {
             }
 
             console.warn(
-                "Font manifest loading failed after all retries:",
+                "💀 Font manifest loading failed after all retries:",
                 error
             );
+            // Utiliser un manifest vide au lieu de faire planter l'app
             this.state.manifest = {};
         }
     }

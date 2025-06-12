@@ -1,5 +1,6 @@
 export { FontManager } from "./FontManager.js";
 export { IconManager } from "./IconManager.js";
+export { ThemeManager } from "./ThemeManager.js";
 export { StyleManager } from "./StyleManager.js";
 export { DomManager } from "./DomManager.js";
 export { ModalManager } from "./ModalManager.js";

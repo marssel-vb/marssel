@@ -6,36 +6,39 @@ export class PopoverManager {
         this.activePopover = null;
         this.popovers = new Map();
         this.popoverStyles = new PopoverStyles(marssel.styleManager);
+
+        // Cache DOM elements
+        this.documentElement = document.documentElement;
+
+        // Bind methods to preserve context
+        this.handleOutsideClick = this.handleOutsideClick.bind(this);
+        this.handleTriggerClick = this.handleTriggerClick.bind(this);
     }
 
     init() {
-        // Vérifie s'il y a au moins un trigger
-        const hasPopover = document.querySelector("[data-popover-trigger]");
-        if (!hasPopover) return;
-
-        // Add default styles
-        this.popoverStyles.addBaseStyles();
-
-        // Find all popover triggers and popover elements
+        // Early return with cached query
         const triggers = document.querySelectorAll("[data-popover-trigger]");
+        if (!triggers.length) return;
 
+        // Add default styles once
+        this.popoverStyles.initializeStyles();
+
+        // Process all triggers
+        this.setupTriggers(triggers);
+
+        // Single event listener for outside clicks (event delegation)
+        document.addEventListener("click", this.handleOutsideClick, {
+            passive: true,
+        });
+    }
+
+    setupTriggers(triggers) {
         triggers.forEach((trigger) => {
             const targetId = trigger.getAttribute("data-popover-trigger");
             const popover = document.getElementById(targetId);
 
             if (popover) {
                 this.registerPopover(trigger, popover);
-            }
-        });
-
-        // Close popovers when clicking outside
-        document.addEventListener("click", (event) => {
-            if (
-                this.activePopover &&
-                !this.activePopover.trigger.contains(event.target) &&
-                !this.activePopover.element.contains(event.target)
-            ) {
-                this.closeActivePopover();
             }
         });
     }
@@ -47,27 +50,49 @@ export class PopoverManager {
         // Add direction class
         element.classList.add(`popover-${direction}`);
 
-        this.popovers.set(trigger, {
+        // Store popover data
+        const popoverData = {
             trigger,
             element,
             direction,
-        });
+        };
 
-        trigger.addEventListener("click", (event) => {
-            event.stopPropagation();
-            this.togglePopover(trigger);
+        this.popovers.set(trigger, popoverData);
+
+        // Add optimized event listener
+        trigger.addEventListener("click", this.handleTriggerClick, {
+            passive: false,
         });
     }
 
-    togglePopover(trigger) {
-        // Close active popover if it's not the current one
-        if (this.activePopover && this.activePopover.trigger !== trigger) {
+    handleTriggerClick(event) {
+        event.stopPropagation();
+        event.preventDefault();
+        this.togglePopover(event.currentTarget);
+    }
+
+    handleOutsideClick(event) {
+        if (!this.activePopover) return;
+
+        const { trigger, element } = this.activePopover;
+        const isClickOutside =
+            !trigger.contains(event.target) && !element.contains(event.target);
+
+        if (isClickOutside) {
             this.closeActivePopover();
         }
+    }
 
+    togglePopover(trigger) {
         const popoverData = this.popovers.get(trigger);
         if (!popoverData) return;
 
+        // Close different active popover
+        if (this.activePopover && this.activePopover !== popoverData) {
+            this.closeActivePopover();
+        }
+
+        // Toggle current popover
         if (this.activePopover === popoverData) {
             this.closeActivePopover();
         } else {
@@ -78,74 +103,114 @@ export class PopoverManager {
     openPopover(popoverData) {
         const { trigger, element, direction } = popoverData;
 
-        // Position the popover
+        // Position first, then show (prevents layout thrashing)
         this.positionPopover(trigger, element, direction);
 
-        // Show the popover
-        element.classList.add("popover-visible");
+        // Use requestAnimationFrame for smooth animation
+        requestAnimationFrame(() => {
+            element.classList.add("popover-visible");
+        });
+
         this.activePopover = popoverData;
     }
 
     closeActivePopover() {
-        if (this.activePopover) {
-            this.activePopover.element.classList.remove("popover-visible");
-            this.activePopover = null;
-        }
+        if (!this.activePopover) return;
+
+        this.activePopover.element.classList.remove("popover-visible");
+        this.activePopover = null;
     }
 
     positionPopover(trigger, popover, direction) {
+        // Cache rectangles calculation
         const triggerRect = trigger.getBoundingClientRect();
         const popoverRect = popover.getBoundingClientRect();
 
-        let left, top;
-
-        switch (direction) {
-            case "bottom":
-                left =
-                    triggerRect.left +
-                    triggerRect.width / 2 -
-                    popoverRect.width / 2;
-                top = triggerRect.bottom + 10;
-                break;
-            case "top":
-                left =
-                    triggerRect.left +
-                    triggerRect.width / 2 -
-                    popoverRect.width / 2;
-                top = triggerRect.top - popoverRect.height - 10;
-                break;
-            case "left":
-                left = triggerRect.left - popoverRect.width - 10;
-                top =
-                    triggerRect.top +
-                    triggerRect.height / 2 -
-                    popoverRect.height / 2;
-                break;
-            case "right":
-                left = triggerRect.right + 10;
-                top =
-                    triggerRect.top +
-                    triggerRect.height / 2 -
-                    popoverRect.height / 2;
-                break;
-        }
-
-        // Adjust for window boundaries
+        // Cache window dimensions
         const windowWidth = window.innerWidth;
         const windowHeight = window.innerHeight;
 
-        // Horizontal adjustment
-        if (left < 0) left = 10;
-        if (left + popoverRect.width > windowWidth)
-            left = windowWidth - popoverRect.width - 10;
+        const position = this.calculatePosition(
+            triggerRect,
+            popoverRect,
+            direction,
+            windowWidth,
+            windowHeight
+        );
 
-        // Vertical adjustment
-        if (top < 0) top = 10;
-        if (top + popoverRect.height > windowHeight)
-            top = windowHeight - popoverRect.height - 10;
+        // Batch DOM updates
+        this.applyPosition(popover, position);
+    }
 
-        popover.style.position = "fixed";
-        popover.style.left = `${left}px`;
-        popover.style.top = `${top}px`;
+    calculatePosition(
+        triggerRect,
+        popoverRect,
+        direction,
+        windowWidth,
+        windowHeight
+    ) {
+        const offset = 10; // Magic number extracted as constant
+        const positions = {
+            bottom: {
+                left:
+                    triggerRect.left +
+                    (triggerRect.width - popoverRect.width) / 2,
+                top: triggerRect.bottom + offset,
+            },
+            top: {
+                left:
+                    triggerRect.left +
+                    (triggerRect.width - popoverRect.width) / 2,
+                top: triggerRect.top - popoverRect.height - offset,
+            },
+            left: {
+                left: triggerRect.left - popoverRect.width - offset,
+                top:
+                    triggerRect.top +
+                    (triggerRect.height - popoverRect.height) / 2,
+            },
+            right: {
+                left: triggerRect.right + offset,
+                top:
+                    triggerRect.top +
+                    (triggerRect.height - popoverRect.height) / 2,
+            },
+        };
+
+        let { left, top } = positions[direction] || positions.bottom;
+
+        // Apply boundary constraints
+        left = Math.max(
+            offset,
+            Math.min(left, windowWidth - popoverRect.width - offset)
+        );
+        top = Math.max(
+            offset,
+            Math.min(top, windowHeight - popoverRect.height - offset)
+        );
+
+        return { left, top };
+    }
+
+    applyPosition(popover, { left, top }) {
+        // Batch style updates
+        Object.assign(popover.style, {
+            position: "fixed",
+            left: `${left}px`,
+            top: `${top}px`,
+        });
+    }
+
+    // Cleanup method for better memory management
+    destroy() {
+        document.removeEventListener("click", this.handleOutsideClick);
+
+        // Clean up all trigger listeners
+        this.popovers.forEach(({ trigger }) => {
+            trigger.removeEventListener("click", this.handleTriggerClick);
+        });
+
+        this.popovers.clear();
+        this.activePopover = null;
     }
 }

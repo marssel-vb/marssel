@@ -1,322 +1,393 @@
-// Ce fichier contient les styles par défaut pour le système de header
+// Système de styles pour header optimisé avec gestion centralisée des déclarations
 export class HeaderStyles {
     constructor(styleManager) {
         this.styleManager = styleManager;
+
+        // Cache des déclarations communes pour éviter la duplication
+        this.commonDeclarations = this.initializeCommonDeclarations();
+
+        // Configuration des sélecteurs pour un accès rapide
+        this.selectors = this.initializeSelectors();
     }
 
+    /**
+     * Initialise les déclarations CSS communes réutilisables
+     */
+    initializeCommonDeclarations() {
+        return {
+            flex: {
+                display: new Set(["display: flex"]),
+                alignCenter: new Set(["align-items: center"]),
+                justifyBetween: new Set(["justify-content: space-between"]),
+                justifyStart: new Set(["justify-content: flex-start"]),
+                justifyCenter: new Set(["justify-content: center"]),
+                justifyEnd: new Set(["justify-content: flex-end"]),
+                column: new Set(["flex-direction: column"]),
+                wrap: new Set(["flex-wrap: wrap"]),
+                noShrink: new Set(["flex: 0 0 auto"]),
+                grow: new Set(["flex: 1 1 auto"]),
+            },
+            position: {
+                relative: new Set(["position: relative"]),
+                absolute: new Set(["position: absolute"]),
+                fixed: new Set(["position: fixed"]),
+            },
+            display: {
+                block: new Set(["display: block"]),
+                none: new Set(["display: none"]),
+                inlineBlock: new Set(["display: inline-block"]),
+            },
+            transitions: {
+                all: new Set(["transition: all 0.3s ease"]),
+                opacity: new Set(["transition: opacity 0.3s ease"]),
+                transform: new Set(["transition: .25s ease-in-out"]),
+            },
+            button: {
+                base: new Set([
+                    "background: none",
+                    "border: none",
+                    "cursor: pointer",
+                ]),
+                primary: new Set([
+                    "padding: 0.5rem 1rem",
+                    "background-color: #4a90e2",
+                    "color: white",
+                    "border: none",
+                    "border-radius: 3px",
+                    "cursor: pointer",
+                    "text-decoration: none",
+                ]),
+            },
+        };
+    }
+
+    /**
+     * Initialise la configuration des sélecteurs
+     */
+    initializeSelectors() {
+        return {
+            header: ".header",
+            container: ".header-container",
+            logo: ".header-logo",
+            navbar: ".header-navbar",
+            actions: ".header-actions",
+            nav: ".nav",
+            navItem: ".nav-item",
+            navLink: ".nav-link",
+            icon: ".icon",
+            mobileMenu: ".mobile-menu",
+            menuToggle: ".menu-toggle",
+            menuClose: ".menu-close",
+            overlay: ".menu-overlay",
+        };
+    }
+
+    /**
+     * Combine plusieurs sets de déclarations CSS
+     */
+    combineDeclarations(...declarationSets) {
+        const combined = new Set();
+        declarationSets.forEach((set) => {
+            if (set) {
+                set.forEach((declaration) => combined.add(declaration));
+            }
+        });
+        return combined;
+    }
+
+    /**
+     * Ajoute des styles avec gestion optimisée
+     */
+    addOptimizedStyles(selector, ...declarationSets) {
+        const combined = this.combineDeclarations(...declarationSets);
+        this.styleManager.addDeclarationsWithMediaQuery([], selector, combined);
+    }
+
+    /**
+     * Ajoute tous les styles de base du header
+     */
     addBaseStyles() {
-        // Styles de base pour le header
-        const headerBaseDeclarations = new Set([
-            "background-color: #fff",
+        this.addHeaderBaseStyles();
+        this.addNavigationStyles();
+        this.addMobileMenuStyles();
+        this.addButtonStyles();
+        this.addResponsiveStyles();
+        this.addPositioningStyles();
+    }
+
+    /**
+     * Styles de base du header et conteneur
+     */
+    addHeaderBaseStyles() {
+        // Header principal
+        const headerStyles = new Set([
             "box-shadow: 0 2px 10px rgba(0,0,0,0.1)",
-            "position: relative",
             "width: 100%",
             "z-index: 100",
-            "display: flex",
-            "flex-wrap: wrap",
-            "align-items: center",
             "padding: 0.5rem 1rem",
-            "transition: all 0.3s ease",
         ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
-            ".header",
-            headerBaseDeclarations
+        this.addOptimizedStyles(
+            this.selectors.header,
+            headerStyles,
+            this.commonDeclarations.position.relative,
+            this.commonDeclarations.flex.display,
+            this.commonDeclarations.flex.wrap,
+            this.commonDeclarations.flex.alignCenter,
+            this.commonDeclarations.transitions.all
         );
 
-        // Container pour le contenu du header
-        const headerContainerDeclarations = new Set([
-            "display: flex",
-            "flex-wrap: wrap",
-            "width: 100%",
-            "align-items: center",
-            "justify-content: space-between",
-        ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
-            ".header-container",
-            headerContainerDeclarations
+        // Container du header
+        this.addOptimizedStyles(
+            this.selectors.container,
+            this.commonDeclarations.flex.display,
+            this.commonDeclarations.flex.wrap,
+            this.commonDeclarations.flex.alignCenter,
+            this.commonDeclarations.flex.justifyBetween,
+            new Set(["width: 100%"])
         );
 
-        // Styles de base pour le logo
-        const logoDeclarations = new Set([
-            "display: flex",
-            "align-items: center",
-            "flex: 0 0 auto",
-        ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
-            ".header-logo",
-            logoDeclarations
+        // Logo
+        this.addOptimizedStyles(
+            this.selectors.logo,
+            this.commonDeclarations.flex.display,
+            this.commonDeclarations.flex.alignCenter,
+            this.commonDeclarations.flex.noShrink
+        );
+    }
+
+    /**
+     * Styles de navigation
+     */
+    addNavigationStyles() {
+        // Navbar principale
+        this.addOptimizedStyles(
+            this.selectors.navbar,
+            this.commonDeclarations.flex.display,
+            this.commonDeclarations.flex.alignCenter
         );
 
-        // Styles pour l'image du logo
-        const logoImgDeclarations = new Set(["height: 40px"]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
-            ".header-logo img",
-            logoImgDeclarations
+        // Actions (boutons, login, etc.)
+        this.addOptimizedStyles(
+            this.selectors.actions,
+            this.commonDeclarations.flex.display,
+            this.commonDeclarations.flex.alignCenter,
+            new Set(["margin-left: auto"])
         );
 
-        // Styles pour la navbar
-        const navbarDeclarations = new Set([
-            "display: flex",
-            "align-items: center",
-        ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
-            ".header-navbar",
-            navbarDeclarations
+        // Liste de navigation
+        this.addOptimizedStyles(
+            this.selectors.nav,
+            this.commonDeclarations.flex.display,
+            new Set(["padding-left: 0", "margin-bottom: 0", "list-style: none"])
         );
 
-        // Styles pour les actions (boutons, login, etc.)
-        const actionsDeclarations = new Set([
-            "display: flex",
-            "align-items: center",
-            "margin-left: auto",
-        ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
-            ".header-actions",
-            actionsDeclarations
+        // Éléments de navigation
+        this.addOptimizedStyles(
+            this.selectors.navItem,
+            this.commonDeclarations.position.relative,
+            new Set(["margin: 0 0.5rem"])
         );
 
-        // Styles pour les boutons dans les actions
-        const actionsButtonDeclarations = new Set([
-            "padding: 0.5rem 1rem",
-            "background-color: #4a90e2",
-            "color: white",
-            "border: none",
-            "border-radius: 3px",
-            "cursor: pointer",
-            "text-decoration: none",
-            "margin-left: 0.5rem",
-        ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
-            ".header-actions .btn",
-            actionsButtonDeclarations
-        );
-
-        // Hover pour les boutons d'actions
-        const actionsButtonHoverDeclarations = new Set([
-            "background-color: #3a80d2",
-        ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
-            ".header-actions .btn:hover",
-            actionsButtonHoverDeclarations
-        );
-
-        // Styles pour la liste de navigation
-        const navListDeclarations = new Set([
-            "display: flex",
-            "padding-left: 0",
-            "margin-bottom: 0",
-            "list-style: none",
-        ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
-            ".nav",
-            navListDeclarations
-        );
-
-        // Styles pour les éléments de navigation
-        const navItemDeclarations = new Set([
-            "position: relative",
-            "margin: 0 0.5rem",
-        ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
-            ".nav-item",
-            navItemDeclarations
-        );
-
-        // Styles pour les liens de navigation
-        const navLinkDeclarations = new Set([
-            "display: block",
+        // Liens de navigation
+        const navLinkStyles = new Set([
             "padding: 0.5rem 1rem",
             "text-decoration: none",
             "cursor: pointer",
-            "color: #333",
             "font-weight: 500",
         ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
-            ".nav-link",
-            navLinkDeclarations
+        this.addOptimizedStyles(
+            this.selectors.navLink,
+            this.commonDeclarations.display.block,
+            navLinkStyles
         );
 
-        // Hover pour les liens de navigation
-        const navLinkHoverDeclarations = new Set(["color: #4a90e2"]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
-            ".nav-link:hover",
-            navLinkHoverDeclarations
+        // Hover des liens
+        this.addOptimizedStyles(
+            `${this.selectors.navLink}:hover`,
+            new Set(["color: #4a90e2"])
         );
+    }
 
-        // Styles pour les icônes
-        const iconBaseDeclarations = new Set([
-            "display: inline-block",
-            "width: 16px",
-            "height: 16px",
-            "vertical-align: middle",
-        ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
-            ".icon",
-            iconBaseDeclarations
-        );
+    /**
+     * Styles des menus mobiles
+     */
+    addMobileMenuStyles() {
+        // Configuration des types de menu mobile
+        const mobileMenuConfigs = {
+            sidebar: {
+                baseStyles: new Set([
+                    "width: 280px",
+                    "max-width: 80%",
+                    "background-color: #fff",
+                    "z-index: 1100",
+                    "opacity: 0",
+                ]),
+                transforms: {
+                    left: new Set(["left: 0", "transform: translateX(-100%)"]),
+                    right: new Set(["right: 0", "transform: translateX(100%)"]),
+                },
+            },
+            fullpage: {
+                baseStyles: new Set([
+                    "background-color: #fff",
+                    "z-index: 1100",
+                    "opacity: 0",
+                    "overflow-y: auto",
+                ]),
+            },
+            below: {
+                baseStyles: new Set([
+                    "width: 100%",
+                    "background-color: #fff",
+                    "border-top: 1px solid rgba(0, 0, 0, 0.1)",
+                    "padding: 1rem",
+                    "opacity: 0",
+                ]),
+            },
+        };
 
-        // Styles pour la version mobile du menu
-        const mobileMenuDeclarations = new Set([
-            "display: none",
-            "position: fixed",
-            "top: 0",
-            "bottom: 0",
-            "width: 280px",
-            "max-width: 80%",
-            "background-color: #fff",
-            "z-index: 1050",
-            "transition: all 0.3s ease",
-            "opacity: 0",
-        ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
+        // Menu mobile sidebar
+        this.addOptimizedStyles(
             ".mobile-menu.sidebar",
-            mobileMenuDeclarations
+            this.commonDeclarations.display.none,
+            this.commonDeclarations.position.fixed,
+            new Set(["top: 0", "bottom: 0"]),
+            mobileMenuConfigs.sidebar.baseStyles,
+            this.commonDeclarations.transitions.all
         );
 
-        // Styles pour la sidebar à gauche
-        const leftSidebarDeclarations = new Set([
-            "left: 0",
-            "transform: translateX(-100%)",
-        ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
+        // Sidebars gauche et droite
+        this.addOptimizedStyles(
             ".sidebar-left .mobile-menu",
-            leftSidebarDeclarations
+            mobileMenuConfigs.sidebar.transforms.left
         );
 
-        // Styles pour la sidebar à droite
-        const rightSidebarDeclarations = new Set([
-            "right: 0",
-            "transform: translateX(100%)",
-        ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
+        this.addOptimizedStyles(
             ".sidebar-right .mobile-menu",
-            rightSidebarDeclarations
+            mobileMenuConfigs.sidebar.transforms.right
         );
 
-        // Styles pour le menu en pleine page
-        const fullpageMenuDeclarations = new Set([
-            "display: none",
-            "position: fixed",
-            "top: 0",
-            "left: 0",
-            "right: 0",
-            "bottom: 0",
-            "background-color: #fff",
-            "z-index: 1050",
-            "opacity: 0",
-            "transition: opacity 0.3s ease",
-            "overflow-y: auto",
-        ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
+        // Menu pleine page
+        this.addOptimizedStyles(
             ".mobile-menu.fullpage",
-            fullpageMenuDeclarations
+            this.commonDeclarations.display.none,
+            this.commonDeclarations.position.fixed,
+            new Set(["top: 0", "left: 0", "right: 0", "bottom: 0"]),
+            mobileMenuConfigs.fullpage.baseStyles,
+            this.commonDeclarations.transitions.opacity
         );
 
-        // Styles pour le menu sous le header
-        const belowMenuDeclarations = new Set([
-            "display: none",
-            "width: 100%",
-            "background-color: #fff",
-            "border-top: 1px solid rgba(0, 0, 0, 0.1)",
-            "padding: 1rem",
-            "opacity: 0",
-            "transition: opacity 0.3s ease",
-        ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
+        // Menu sous le header
+        this.addOptimizedStyles(
             ".mobile-menu.below",
-            belowMenuDeclarations
+            this.commonDeclarations.display.none,
+            mobileMenuConfigs.below.baseStyles,
+            this.commonDeclarations.transitions.opacity
         );
 
-        // Désactiver complètement l'overlay pour "below"
-        const belowOverlayDeclarations = new Set([
-            "display: none !important",
-            "pointer-events: none !important",
-        ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
-            '[data-mobile-menu-type="below"] .menu-overlay',
-            belowOverlayDeclarations
+        // Menu actif
+        this.addOptimizedStyles(
+            ".menu-open .mobile-menu",
+            this.commonDeclarations.display.block,
+            new Set(["opacity: 1"])
         );
 
-        // Masquer le bouton fermer pour le menu "below"
-        const belowCloseButtonDeclarations = new Set([
-            "display: none !important",
-        ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
-            ".mobile-menu.below .menu-close",
-            belowCloseButtonDeclarations
+        // Overlay
+        this.addOverlayStyles();
+    }
+
+    /**
+     * Styles de l'overlay
+     */
+    addOverlayStyles() {
+        this.addOptimizedStyles(
+            this.selectors.overlay,
+            this.commonDeclarations.display.none,
+            this.commonDeclarations.position.fixed,
+            new Set([
+                "top: 0",
+                "left: 0",
+                "right: 0",
+                "bottom: 0",
+                "background-color: rgba(0, 0, 0, 0.5)",
+                "z-index: 1040",
+                "opacity: 0",
+            ]),
+            this.commonDeclarations.transitions.opacity
         );
 
-        // Overlay pour les sidebars et menus plein écran
-        const overlayDeclarations = new Set([
-            "display: none",
-            "position: fixed",
-            "top: 0",
-            "left: 0",
-            "right: 0",
-            "bottom: 0",
-            "background-color: rgba(0, 0, 0, 0.5)",
-            "z-index: 1040",
-            "opacity: 0",
-            "transition: opacity 0.3s ease",
-        ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
-            ".menu-overlay",
-            overlayDeclarations
-        );
-
-        // Activer l'overlay
-        const activeOverlayDeclarations = new Set([
-            "display: block",
-            "opacity: 1",
-        ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
+        this.addOptimizedStyles(
             ".menu-open .menu-overlay",
-            activeOverlayDeclarations
+            this.commonDeclarations.display.block,
+            new Set(["opacity: 1"])
         );
 
-        // Bouton toggle pour le menu mobile
-        const toggleButtonDeclarations = new Set([
-            "display: none",
-            "background: none",
-            "border: none",
-            "cursor: pointer",
+        // Désactiver l'overlay pour le menu "below"
+        this.addOptimizedStyles(
+            '[data-mobile-menu-type="below"] .menu-overlay',
+            new Set([
+                "display: none !important",
+                "pointer-events: none !important",
+            ])
+        );
+    }
+
+    /**
+     * Styles des boutons
+     */
+    addButtonStyles() {
+        // Boutons d'actions
+        this.addOptimizedStyles(
+            ".header-actions .btn",
+            this.commonDeclarations.button.primary,
+            new Set(["margin-left: 0.5rem"])
+        );
+
+        this.addOptimizedStyles(
+            ".header-actions .btn:hover",
+            new Set(["background-color: #3a80d2"])
+        );
+
+        // Bouton toggle mobile
+        const toggleStyles = new Set([
             "padding: 0.5rem",
             "width: 30px",
             "height: 30px",
-            "position: relative",
             "margin-left: 1rem",
         ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
-            ".menu-toggle",
-            toggleButtonDeclarations
+        this.addOptimizedStyles(
+            this.selectors.menuToggle,
+            this.commonDeclarations.display.none,
+            this.commonDeclarations.position.relative,
+            this.commonDeclarations.button.base,
+            toggleStyles
         );
 
-        // Styles pour les barres du bouton toggle
-        const toggleButtonBarDeclarations = new Set([
-            "display: block",
+        // Barres du bouton toggle
+        this.addToggleButtonBars();
+
+        // Bouton fermer
+        this.addOptimizedStyles(
+            this.selectors.menuClose,
+            this.commonDeclarations.position.absolute,
+            this.commonDeclarations.button.base,
+            new Set([
+                "top: 1rem",
+                "right: 1rem",
+                "font-size: 1.5rem",
+                "z-index: 1060",
+            ])
+        );
+
+        // Gestion des boutons mobiles
+        this.addMobileButtonManagement();
+    }
+
+    /**
+     * Styles des barres du bouton toggle
+     */
+    addToggleButtonBars() {
+        const barStyles = new Set([
             "position: absolute",
             "height: 3px",
             "width: 100%",
@@ -325,286 +396,154 @@ export class HeaderStyles {
             "opacity: 1",
             "left: 0",
             "transform: rotate(0deg)",
-            "transition: .25s ease-in-out",
         ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
+
+        this.addOptimizedStyles(
             ".menu-toggle span",
-            toggleButtonBarDeclarations
+            this.commonDeclarations.display.block,
+            barStyles,
+            this.commonDeclarations.transitions.transform
         );
 
-        // Position de la première barre
-        const toggleButtonBar1Declarations = new Set(["top: 6px"]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
-            ".menu-toggle span:nth-child(1)",
-            toggleButtonBar1Declarations
-        );
+        // Positions des barres
+        const barPositions = [
+            { selector: ".menu-toggle span:nth-child(1)", top: "6px" },
+            { selector: ".menu-toggle span:nth-child(2)", top: "18px" },
+            { selector: ".menu-toggle span:nth-child(3)", top: "30px" },
+        ];
 
-        // Position de la deuxième barre
-        const toggleButtonBar2Declarations = new Set(["top: 18px"]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
-            ".menu-toggle span:nth-child(2)",
-            toggleButtonBar2Declarations
-        );
+        barPositions.forEach(({ selector, top }) => {
+            this.addOptimizedStyles(selector, new Set([`top: ${top}`]));
+        });
+    }
 
-        // Position de la troisième barre
-        const toggleButtonBar3Declarations = new Set(["top: 30px"]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
-            ".menu-toggle span:nth-child(3)",
-            toggleButtonBar3Declarations
-        );
-
-        // Container pour les boutons mobiles
-        const mobileButtonsContainerDeclarations = new Set([
-            "position: relative",
-            "width: 30px",
-            "height: 30px",
-            "margin-left: 1rem",
-        ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
+    /**
+     * Gestion des boutons mobiles
+     */
+    addMobileButtonManagement() {
+        // Container des boutons mobiles
+        this.addOptimizedStyles(
             ".mobile-buttons-container",
-            mobileButtonsContainerDeclarations
+            this.commonDeclarations.position.relative,
+            new Set(["width: 30px", "height: 30px", "margin-left: 1rem"])
         );
 
-        // Masquer le bouton close par défaut
-        const mobileCloseButtonHiddenDeclarations = new Set([
-            "display: none",
-            "position: absolute",
-            "top: 0",
-            "left: 0",
-        ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
+        // Masquer/afficher les boutons selon l'état du menu
+        this.addOptimizedStyles(
             ".mobile-buttons-container .menu-close",
-            mobileCloseButtonHiddenDeclarations
+            this.commonDeclarations.display.none,
+            this.commonDeclarations.position.absolute,
+            new Set(["top: 0", "left: 0"])
         );
 
-        // Masquer le bouton toggle quand le menu est ouvert
-        const mobileToggleButtonHiddenDeclarations = new Set(["display: none"]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
+        this.addOptimizedStyles(
             ".menu-open .mobile-buttons-container .menu-toggle",
-            mobileToggleButtonHiddenDeclarations
+            this.commonDeclarations.display.none
         );
 
-        // Afficher le bouton close quand le menu est ouvert
-        const mobileCloseButtonVisibleDeclarations = new Set([
-            "display: block",
-        ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
+        this.addOptimizedStyles(
             ".menu-open .mobile-buttons-container .menu-close",
-            mobileCloseButtonVisibleDeclarations
+            this.commonDeclarations.display.block
         );
 
-        const closeButtonDeclarations = new Set([
-            "position: absolute",
-            "top: 1rem",
-            "right: 1rem",
-            "font-size: 1.5rem",
-            "background: none",
-            "border: none",
-            "cursor: pointer",
-            "z-index: 1060",
-        ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
-            ".menu-close",
-            closeButtonDeclarations
+        // Masquer le bouton fermer pour le menu "below"
+        this.addOptimizedStyles(
+            ".mobile-menu.below .menu-close",
+            new Set(["display: none !important"])
         );
-
-        // Styles pour le menu mobile actif
-        const activeMobileMenuDeclarations = new Set([
-            "display: block",
-            "opacity: 1",
-        ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
-            ".menu-open .mobile-menu",
-            activeMobileMenuDeclarations
-        );
-
-        // Ajuster mieux les styles du menu "below"
-        const activeBelowMenuDeclarations = new Set([
-            "display: block",
-            "opacity: 1",
-        ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
-            ".menu-open .mobile-menu.below",
-            activeBelowMenuDeclarations
-        );
-
-        // Styles pour le header en mode mobile
-        this.addResponsiveStyles();
-
-        // Styles pour les positions des éléments
-        this.addPositioningStyles();
     }
 
+    /**
+     * Styles responsifs
+     */
     addResponsiveStyles() {
-        // En mode mobile, masquer la navbar et afficher le bouton toggle
-        const mobileNavbarDeclarations = new Set(["display: none"]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
+        // Mode mobile
+        this.addOptimizedStyles(
             ".mobile-view .header-container > .header-navbar",
-            mobileNavbarDeclarations
+            this.commonDeclarations.display.none
         );
 
-        const mobileToggleDeclarations = new Set(["display: block"]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
+        this.addOptimizedStyles(
             ".mobile-view .menu-toggle",
-            mobileToggleDeclarations
+            this.commonDeclarations.display.block
         );
 
-        // Styles pour la navbar dans le menu mobile
-        const mobileSidebarNavDeclarations = new Set([
-            "display: block",
-            "padding: 1rem",
-        ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
+        // Navigation dans le menu mobile
+        this.addOptimizedStyles(
             ".mobile-menu .header-navbar",
-            mobileSidebarNavDeclarations
+            this.commonDeclarations.display.block,
+            new Set(["padding: 1rem"])
         );
 
-        const mobileNavDeclarations = new Set([
-            "flex-direction: column",
-            "align-items: flex-start",
-        ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
+        this.addOptimizedStyles(
             ".mobile-menu .nav",
-            mobileNavDeclarations
+            this.commonDeclarations.flex.column,
+            new Set(["align-items: flex-start"])
         );
 
-        const mobileNavItemDeclarations = new Set(["width: 100%", "margin: 0"]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
+        this.addOptimizedStyles(
             ".mobile-menu .nav-item",
-            mobileNavItemDeclarations
+            new Set(["width: 100%", "margin: 0"])
         );
 
-        const mobileNavLinkDeclarations = new Set([
-            "padding: 0.75rem 0",
-            "width: 100%",
-        ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
+        this.addOptimizedStyles(
             ".mobile-menu .nav-link",
-            mobileNavLinkDeclarations
+            new Set(["padding: 0.75rem 0", "width: 100%"])
         );
-
-        // Remarque: les styles de dropdown en mode mobile ont été supprimés car maintenant ils sont dans DropdownStyles.js
     }
 
+    /**
+     * Styles de positionnement avec configuration centralisée
+     */
     addPositioningStyles() {
-        // Positionnement du logo
-        const logoLeftDeclarations = new Set([
-            "justify-content: flex-start",
-            "order: 1",
-        ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
-            ".logo-left .header-logo",
-            logoLeftDeclarations
-        );
+        const positions = ["left", "center", "right"];
+        const elements = [
+            { prefix: "logo", selector: ".header-logo" },
+            { prefix: "nav", selector: ".header-navbar" },
+            { prefix: "action", selector: ".header-actions" },
+        ];
 
-        const logoCenterDeclarations = new Set([
-            "justify-content: center",
-            "order: 2",
-        ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
-            ".logo-center .header-logo",
-            logoCenterDeclarations
-        );
+        elements.forEach(({ prefix, selector }) => {
+            positions.forEach((position, index) => {
+                const order = index + 1;
+                const justifyClass =
+                    position === "left"
+                        ? "justifyStart"
+                        : position === "center"
+                        ? "justifyCenter"
+                        : "justifyEnd";
 
-        const logoRightDeclarations = new Set([
-            "justify-content: flex-end",
-            "order: 3",
-        ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
-            ".logo-right .header-logo",
-            logoRightDeclarations
-        );
+                this.addOptimizedStyles(
+                    `.${prefix}-${position} ${selector}`,
+                    this.commonDeclarations.flex[justifyClass],
+                    new Set([`order: ${order}`])
+                );
+            });
+        });
 
-        // Positionnement de la navbar
-        const navLeftDeclarations = new Set([
-            "justify-content: flex-start",
-            "order: 1",
-        ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
-            ".nav-left .header-navbar",
-            navLeftDeclarations
-        );
-
-        const navCenterDeclarations = new Set([
-            "justify-content: center",
-            "order: 2",
-        ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
-            ".nav-center .header-navbar",
-            navCenterDeclarations
-        );
-
-        const navRightDeclarations = new Set([
-            "justify-content: flex-end",
-            "order: 3",
-        ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
-            ".nav-right .header-navbar",
-            navRightDeclarations
-        );
-
-        // Positionnement des actions
-        const actionLeftDeclarations = new Set([
-            "justify-content: flex-start",
-            "order: 1",
-        ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
-            ".action-left .header-actions",
-            actionLeftDeclarations
-        );
-
-        const actionCenterDeclarations = new Set([
-            "justify-content: center",
-            "order: 2",
-        ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
-            ".action-center .header-actions",
-            actionCenterDeclarations
-        );
-
-        const actionRightDeclarations = new Set([
-            "justify-content: flex-end",
-            "order: 3",
-        ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
-            ".action-right .header-actions",
-            actionRightDeclarations
-        );
-
-        // Ajustements spécifiques pour les différentes combinaisons
-        const logoLeftNavCenterActionsRightDeclarations = new Set([
-            "flex: 1 1 auto",
-        ]);
-        this.styleManager.addDeclarationsWithMediaQuery(
-            [],
+        // Ajustement spécifique pour navbar centrée
+        this.addOptimizedStyles(
             ".logo-left.nav-center.action-right .header-navbar",
-            logoLeftNavCenterActionsRightDeclarations
+            this.commonDeclarations.flex.grow
         );
+    }
+
+    /**
+     * Ajoute des styles pour les icônes
+     */
+    addIconStyles() {
+        this.addOptimizedStyles(
+            this.selectors.icon,
+            this.commonDeclarations.display.inlineBlock,
+            new Set(["width: 16px", "height: 16px", "vertical-align: middle"])
+        );
+    }
+
+    /**
+     * Méthode principale pour initialiser tous les styles
+     */
+    initialize() {
+        this.addBaseStyles();
+        this.addIconStyles();
     }
 }

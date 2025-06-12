@@ -1,288 +1,240 @@
-// Ce fichier contient les styles par défaut pour le système de dropdown
+// Système de dropdown optimisé avec styles modulaires
 export class DropdownStyles {
-  constructor(styleManager) {
-    this.styleManager = styleManager;
-    this.addBaseStyles();
-  }
+    constructor(styleManager) {
+        this.styleManager = styleManager;
+        this.mediaQueries = [];
+    }
 
-  addBaseStyles() {
-    // Styles pour les dropdowns
-    const dropdownDeclarations = new Set([
-      "position: relative",
-      "display: inline-block",
-    ]);
-    this.styleManager.addDeclarationsWithMediaQuery(
-      [],
-      ".dropdown",
-      dropdownDeclarations
-    );
+    initializeStyles() {
+        this.addBaseStyles();
+        this.addResponsiveStyles();
+    }
 
-    // Styles pour le bouton toggle des dropdowns
-    const dropdownToggleDeclarations = new Set([
-      "display: flex",
-      "align-items: center",
-      "cursor: pointer",
-    ]);
-    this.styleManager.addDeclarationsWithMediaQuery(
-      [],
-      ".dropdown-toggle",
-      dropdownToggleDeclarations
-    );
+    // Méthode utilitaire pour ajouter des styles
+    addStyles(selector, declarations) {
+        this.styleManager.addDeclarationsWithMediaQuery(
+            this.mediaQueries,
+            selector,
+            new Set(declarations)
+        );
+    }
 
-    // Styles pour l'icône des dropdowns
-    const dropdownIconDeclarations = new Set([
-      "margin-left: 0.35rem",
-      "transition: transform 0.3s ease",
-    ]);
-    this.styleManager.addDeclarationsWithMediaQuery(
-      [],
-      ".dropdown-toggle .icon",
-      dropdownIconDeclarations
-    );
+    addBaseStyles() {
+        // Configuration des styles de base
+        const styleConfig = {
+            // Conteneur principal
+            ".dropdown": [
+                "position: relative",
+                "display: inline-block",
+                "color : lightred",
+            ],
 
-    // Rotation de l'icône quand le dropdown est actif
-    const activeIconDeclarations = new Set(["transform: rotate(180deg)"]);
-    this.styleManager.addDeclarationsWithMediaQuery(
-      [],
-      ".dropdown.active .dropdown-toggle .icon",
-      activeIconDeclarations
-    );
+            // Bouton de déclenchement
+            ".dropdown-toggle": [
+                "display: flex",
+                "align-items: center",
+                "cursor: pointer",
+            ],
 
-    // Styles pour le menu dropdown
-    const dropdownMenuDeclarations = new Set([
-      "position: absolute",
-      "top: 100%",
-      "left: 0",
-      "z-index: 1000",
-      "display: none",
-      "min-width: 12rem",
-      "padding: 0.5rem 0",
-      "margin: 0.125rem 0 0",
-      "background-color: #fff",
-      "border: 1px solid rgba(0, 0, 0, 0.15)",
-      "border-radius: 0.25rem",
-      "box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1)",
-    ]);
-    this.styleManager.addDeclarationsWithMediaQuery(
-      [],
-      ".dropdown-menu",
-      dropdownMenuDeclarations
-    );
+            ".dropdown-toggle .icon": [
+                "margin-left: 0.35rem",
+                "transition: transform 0.3s ease",
+            ],
 
-    // Styles pour les éléments du menu dropdown
-    const dropdownItemDeclarations = new Set([
-      "display: block",
-      "width: 100%",
-      "padding: 0.5rem 1.5rem",
-      "clear: both",
-      "text-align: inherit",
-      "white-space: nowrap",
-      "background-color: transparent",
-      "border: 0",
-      "text-decoration: none",
-      "cursor: pointer",
-      "color: #333",
-    ]);
-    this.styleManager.addDeclarationsWithMediaQuery(
-      [],
-      ".dropdown-item",
-      dropdownItemDeclarations
-    );
+            ".dropdown.active .dropdown-toggle .icon": [
+                "transform: rotate(180deg)",
+            ],
 
-    // Hover pour les éléments du menu dropdown
-    const dropdownItemHoverDeclarations = new Set([
-      "background-color: #f5f5f5",
-      "color: #4a90e2",
-    ]);
-    this.styleManager.addDeclarationsWithMediaQuery(
-      [],
-      ".dropdown-item:hover",
-      dropdownItemHoverDeclarations
-    );
+            // Menu dropdown standard
+            ".dropdown-menu": [
+                "position: absolute",
+                "top: 100%",
+                "left: 0",
+                "z-index: 1000",
+                "display: none",
+                "min-width: 12rem",
+                "padding: 0.5rem 0",
+                "margin: 0.125rem 0 0",
+                "background-color: #fff",
+                "border: 1px solid rgba(0,0,0,0.15)",
+                "border-radius: 0.25rem",
+                "box-shadow: 0 2px 5px rgba(0,0,0,0.1)",
+            ],
 
-    // Styles pour le sous-menu
-    const submenuDeclarations = new Set(["position: relative"]);
-    this.styleManager.addDeclarationsWithMediaQuery(
-      [],
-      ".dropdown-submenu",
-      submenuDeclarations
-    );
+            // Éléments du menu
+            ".dropdown-item": [
+                "display: block",
+                "width: 100%",
+                "padding: 0.5rem 1.5rem",
+                "clear: both",
+                "text-align: inherit",
+                "white-space: nowrap",
+                "background-color: transparent",
+                "border: 0",
+                "text-decoration: none",
+                "cursor: pointer",
+                "color: #333",
+                "transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out",
+            ],
 
-    // Dropdown pleine largeur
-    const dropdownFullwidthDeclarations = new Set([
-      "position: static",
-      "display: inline-block",
-    ]);
-    this.styleManager.addDeclarationsWithMediaQuery(
-      [],
-      ".dropdown-fullwidth",
-      dropdownFullwidthDeclarations
-    );
+            ".dropdown-item:hover": [
+                "background-color: #f5f5f5",
+                "color: #4a90e2",
+            ],
 
-    // Conteneur pour le menu fullwidth
-    const dropdownFullwidthContainerDeclarations = new Set([
-      "position: static!important", // Important pour le positionnement correct
-    ]);
-    this.styleManager.addDeclarationsWithMediaQuery(
-      [],
-      ".dropdown-fullwidth",
-      dropdownFullwidthContainerDeclarations
-    );
+            // Sous-menu
+            ".dropdown-submenu": ["position: relative"],
+        };
 
-    // Styles pour le menu dropdown pleine largeur
-    const fullwidthMenuDeclarations = new Set([
-      "position: absolute",
-      "left: 0", // Centrer par rapport au parent
-      "right: 0",
-      "transform: none", // Astuce pour centrer un élément absolu
-      "width: 100%", // Utiliser la largeur du viewport
-      "max-width: 100vw", // S'assurer qu'il ne dépasse pas
-      "margin: 0",
-      "z-index: 1000",
-      "display: none",
-      "padding: 1rem",
-      "background-color: #fff",
-      "border: 1px solid rgba(0, 0, 0, 0.15)",
-      "box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1)",
-    ]);
-    this.styleManager.addDeclarationsWithMediaQuery(
-      [],
-      ".dropdown-menu-fullwidth",
-      fullwidthMenuDeclarations
-    );
+        // Application des styles de base
+        Object.entries(styleConfig).forEach(([selector, declarations]) => {
+            this.addStyles(selector, declarations);
+        });
 
-    // Styles spécifiques pour le menu dropdown pleine largeur
-    const fullwidthMenuStylesDeclarations = new Set(["padding: 2rem"]);
-    this.styleManager.addDeclarationsWithMediaQuery(
-      [],
-      ".dropdown-menu-fullwidth",
-      fullwidthMenuStylesDeclarations
-    );
+        // Styles spécialisés
+        this.addFullWidthStyles();
+        this.addMegaMenuStyles();
+        this.addIconStyles();
+    }
 
-    // Styles pour la grille du mega menu
-    const megaMenuGridDeclarations = new Set([
-      "grid-template-columns: repeat(4, 1fr)",
-      "gap: 1rem",
-    ]);
-    this.styleManager.addDeclarationsWithMediaQuery(
-      [],
-      ".mega-menu-grid",
-      megaMenuGridDeclarations
-    );
+    addFullWidthStyles() {
+        const fullWidthConfig = {
+            ".dropdown-fullwidth": [
+                "position: static !important",
+                "display: inline-block",
+            ],
 
-    // Styles pour les titres des colonnes du mega menu
-    const megaMenuColumnTitleDeclarations = new Set([
-      "margin-top: 0",
-      "margin-bottom: 1rem",
-      "color: #4a90e2",
-    ]);
-    this.styleManager.addDeclarationsWithMediaQuery(
-      [],
-      ".mega-menu-column h4",
-      megaMenuColumnTitleDeclarations
-    );
+            ".dropdown-menu-fullwidth": [
+                "position: absolute",
+                "left: 0",
+                "right: 0",
+                "transform: none",
+                "width: 100%",
+                "max-width: 100vw",
+                "margin: 0",
+                "z-index: 1000",
+                "display: none",
+                "padding: 2rem",
+                "background-color: #fff",
+                "border: 1px solid rgba(0,0,0,0.15)",
+                "box-shadow: 0 2px 5px rgba(0,0,0,0.1)",
+            ],
+        };
 
-    // Styles pour les listes du mega menu
-    const megaMenuListDeclarations = new Set([
-      "list-style: none",
-      "padding: 0",
-      "margin: 0",
-    ]);
-    this.styleManager.addDeclarationsWithMediaQuery(
-      [],
-      ".mega-menu-column ul",
-      megaMenuListDeclarations
-    );
+        Object.entries(fullWidthConfig).forEach(([selector, declarations]) => {
+            this.addStyles(selector, declarations);
+        });
+    }
 
-    // Styles pour les éléments de liste du mega menu
-    const megaMenuListItemDeclarations = new Set(["margin-bottom: 0.5rem"]);
-    this.styleManager.addDeclarationsWithMediaQuery(
-      [],
-      ".mega-menu-column ul li",
-      megaMenuListItemDeclarations
-    );
+    addMegaMenuStyles() {
+        const megaMenuConfig = {
+            ".mega-menu-grid": [
+                "grid-template-columns: repeat(4, 1fr)",
+                "gap: 1rem",
+            ],
 
-    // Styles pour les liens du mega menu
-    const megaMenuLinkDeclarations = new Set([
-      "color: #333",
-      "text-decoration: none",
-    ]);
-    this.styleManager.addDeclarationsWithMediaQuery(
-      [],
-      ".mega-menu-column ul li a",
-      megaMenuLinkDeclarations
-    );
+            ".mega-menu-column h4": [
+                "margin: 0 0 1rem 0",
+                "color: #4a90e2",
+                "font-size: 1.1rem",
+                "font-weight: 600",
+            ],
 
-    // Hover pour les liens du mega menu
-    const megaMenuLinkHoverDeclarations = new Set(["color: #4a90e2"]);
-    this.styleManager.addDeclarationsWithMediaQuery(
-      [],
-      ".mega-menu-column ul li a:hover",
-      megaMenuLinkHoverDeclarations
-    );
+            ".mega-menu-column ul": [
+                "list-style: none",
+                "padding: 0",
+                "margin: 0",
+            ],
 
-    // Style pour l'icône flèche vers le bas
-    const iconDownDeclarations = new Set([
-      "border: solid #333",
-      "border-width: 0 2px 2px 0",
-      "display: inline-block",
-      "padding: 3px",
-      "transform: rotate(45deg)",
-      "margin-left: 5px",
-    ]);
-    this.styleManager.addDeclarationsWithMediaQuery(
-      [],
-      ".icon-down",
-      iconDownDeclarations
-    );
+            ".mega-menu-column ul li": ["margin-bottom: 0.5rem"],
 
-    // Style pour l'icône flèche vers la droite
-    const iconRightDeclarations = new Set([
-      "border: solid #333",
-      "border-width: 0 2px 2px 0",
-      "display: inline-block",
-      "padding: 3px",
-      "transform: rotate(-45deg)",
-      "margin-left: 5px",
-    ]);
-    this.styleManager.addDeclarationsWithMediaQuery(
-      [],
-      ".icon-right",
-      iconRightDeclarations
-    );
+            ".mega-menu-column ul li a": [
+                "color: #333",
+                "text-decoration: none",
+                "transition: color 0.15s ease-in-out",
+            ],
 
-    // Version responsive pour les dropdowns
-    this.addResponsiveStyles();
-  }
+            ".mega-menu-column ul li a:hover": ["color: #4a90e2"],
+        };
 
-  addResponsiveStyles() {
-    // Styles pour les dropdowns en mode mobile
-    const mobileDropdownMenuDeclarations = new Set([
-      "position: static",
-      "box-shadow: none",
-      "border: none",
-      "border-left: 2px solid rgba(0, 0, 0, 0.1)",
-      "margin-left: 1rem",
-      "padding-left: 0.5rem",
-    ]);
-    this.styleManager.addDeclarationsWithMediaQuery(
-      [],
-      ".mobile-view .dropdown-menu",
-      mobileDropdownMenuDeclarations
-    );
+        Object.entries(megaMenuConfig).forEach(([selector, declarations]) => {
+            this.addStyles(selector, declarations);
+        });
+    }
 
-    // Menu fullwidth en mode mobile
-    const mobileFullwidthMenuDeclarations = new Set([
-      "position: static",
-      "box-shadow: none",
-      "border: none",
-      "border-left: 2px solid rgba(0, 0, 0, 0.1)",
-      "margin-left: 1rem",
-    ]);
-    this.styleManager.addDeclarationsWithMediaQuery(
-      [],
-      ".mobile-view .dropdown-menu-fullwidth",
-      mobileFullwidthMenuDeclarations
-    );
-  }
+    addIconStyles() {
+        const iconBaseStyles = [
+            "border: solid #333",
+            "border-width: 0 2px 2px 0",
+            "display: inline-block",
+            "padding: 3px",
+            "margin-left: 5px",
+            "transition: transform 0.15s ease-in-out",
+        ];
+
+        const iconConfig = {
+            ".icon-down": [...iconBaseStyles, "transform: rotate(45deg)"],
+
+            ".icon-right": [...iconBaseStyles, "transform: rotate(-45deg)"],
+        };
+
+        Object.entries(iconConfig).forEach(([selector, declarations]) => {
+            this.addStyles(selector, declarations);
+        });
+    }
+
+    addResponsiveStyles() {
+        // Sauvegarde des media queries actuelles
+        const originalMediaQueries = this.mediaQueries;
+
+        // Application des styles mobiles
+        this.mediaQueries = ["(max-width: 768px)"];
+
+        const mobileConfig = {
+            ".mobile-view .dropdown-menu": [
+                "position: static",
+                "box-shadow: none",
+                "border: none",
+                "border-left: 2px solid rgba(0,0,0,0.1)",
+                "margin-left: 1rem",
+                "padding-left: 0.5rem",
+            ],
+
+            ".mobile-view .dropdown-menu-fullwidth": [
+                "position: static",
+                "box-shadow: none",
+                "border: none",
+                "border-left: 2px solid rgba(0,0,0,0.1)",
+                "margin-left: 1rem",
+                "padding: 1rem",
+            ],
+        };
+
+        Object.entries(mobileConfig).forEach(([selector, declarations]) => {
+            this.addStyles(selector, declarations);
+        });
+
+        // Restauration des media queries originales
+        this.mediaQueries = originalMediaQueries;
+    }
+
+    // Méthode pour ajouter des styles personnalisés
+    addCustomStyles(customStyles) {
+        if (typeof customStyles === "object" && customStyles !== null) {
+            Object.entries(customStyles).forEach(([selector, declarations]) => {
+                this.addStyles(
+                    selector,
+                    Array.isArray(declarations) ? declarations : [declarations]
+                );
+            });
+        }
+    }
+
+    // Méthode pour réinitialiser tous les styles
+    resetStyles() {
+        // Cette méthode devrait être implémentée selon votre styleManager
+        console.warn(
+            "resetStyles() doit être implémentée selon votre styleManager"
+        );
+    }
 }

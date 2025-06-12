@@ -3,126 +3,215 @@ import { parseGutterValue } from "../utils/parsed.js";
 
 export class StyleManager {
     constructor(marssel, config = {}) {
-        console.log("Constructeur StyleManager avec config:", config);
         this.marssel = marssel;
         this.fontFaces = new Set();
         this.selectorDeclarations = new Map();
         this.compiledRules = new Map();
+        this.themeVariables = new Map();
 
-        // Utiliser config au lieu de options
-        this.lazyload =
-            config && typeof config.lazyload === "boolean"
-                ? config.lazyload
-                : false;
+        // Configuration optimisée
+        this.lazyload = Boolean(config.lazyload);
+        this.maxBatchSize = config.maxBatchSize || 200;
+        this.processingDelay = config.processingDelay || 50;
 
-        console.log("StyleManager.lazyload configuré à:", this.lazyload);
+        // État du lazy loading
         this.lazyObserver = null;
         this.lazyElements = new Map();
-
-        // Ajout de nouvelles propriétés pour une meilleure gestion du lazyload
+        this.pendingLazyElements = new Set();
         this.processingBatch = false;
-        this.maxBatchSize = config.maxBatchSize || 200; // Nombre maximal d'éléments à traiter par lot
-        this.processingDelay = config.processingDelay || 50; // Délai entre les lots en ms
-        this.pendingLazyElements = new Set(); // Éléments en attente de traitement
-        this.scrollHandlerAdded = false;
-        this.hashChangeHandlerAdded = false;
+
+        // Flags pour les event listeners
+        this.eventListenersAdded = false;
+
+        // Cache et optimisations
+        this.debounceStyleUpdate = this.createDebouncer(16);
+        this.handleRapidScroll = this.createScrollHandler();
+        this.viewportCache = { height: 0, scrollTop: 0, timestamp: 0 };
+
+        // Tables de correspondance pour les propriétés
+        this.initPropertyHandlers();
+        this.initPseudoClassMap();
     }
 
-    // Méthode pour initialiser l'IntersectionObserver pour le lazyloading
+    // === INITIALISATION ===
+    initPropertyHandlers() {
+        this.propertyHandlers = {
+            "icon-size": (value, declarations) =>
+                this.handleIconSize(value, declarations),
+            icon: (value, declarations, selector, parsed) =>
+                this.handleIcon(selector, parsed, declarations),
+            font: (value, declarations) => this.handleFont(value, declarations),
+            transform: (value, declarations) =>
+                declarations.add(`transform: ${cleanValue(value)}`),
+            gutter: (value, declarations, selector, parsed) =>
+                this.handleGutter(parsed, selector, declarations),
+            "gutter-x": (value, declarations, selector, parsed) =>
+                this.handleGutter(parsed, selector, declarations),
+            "gutter-y": (value, declarations, selector, parsed) =>
+                this.handleGutter(parsed, selector, declarations),
+            col: (value, declarations, selector, parsed) =>
+                this.handleColumn(parsed, selector, declarations),
+            content: (value, declarations) =>
+                declarations.add(
+                    `content: "${cleanValue(value.replace(/_/g, " "))}"`
+                ),
+            "bg-linear": (value, declarations) =>
+                declarations.add(
+                    `background: linear-gradient(${cleanValue(value)})`
+                ),
+            "bg-radial": (value, declarations) =>
+                declarations.add(
+                    `background: radial-gradient(${cleanValue(value)})`
+                ),
+        };
+    }
+
+    initPseudoClassMap() {
+        this.compoundPseudos = new Set([
+            "any-link",
+            "focus-visible",
+            "focus-within",
+            "local-link",
+            "target-within",
+            "user-invalid",
+            "first-child",
+            "last-child",
+            "only-child",
+            "first-of-type",
+            "last-of-type",
+            "only-of-type",
+            "nth-child",
+            "nth-last-child",
+            "nth-of-type",
+            "nth-last-of-type",
+            "placeholder-shown",
+            "read-only",
+            "read-write",
+        ]);
+    }
+
     initLazyObserver() {
-        if (!this.lazyload) return;
+        if (!this.lazyload || this.lazyObserver) return;
 
         this.lazyObserver = new IntersectionObserver(
-            (entries) => {
-                entries.forEach((entry) => {
-                    if (entry.isIntersecting) {
-                        const element = entry.target;
-                        const classes = this.lazyElements.get(element);
-
-                        if (classes) {
-                            classes.forEach((className) => {
-                                if (
-                                    className.startsWith("[") &&
-                                    className.includes("]-")
-                                ) {
-                                    this.marssel.domManager.processGroupPseudoClass(
-                                        className
-                                    );
-                                } else if (className.includes("+")) {
-                                    this.marssel.domManager.processCombinedClass(
-                                        className
-                                    );
-                                } else if (className.includes("---[")) {
-                                    this.marssel.domManager.processCompactStyles(
-                                        className
-                                    );
-                                } else {
-                                    this.marssel.domManager.processClassName(
-                                        className
-                                    );
-                                }
-                            });
-
-                            // Génération réalisée, on peut supprimer et arrêter d'observer
-                            this.lazyElements.delete(element);
-                            this.lazyObserver.unobserve(element);
-                        }
-
-                        this.debounceStyleUpdate();
-                    }
-                });
-            },
-            {
-                rootMargin: "800px", // Marge pour précharger les styles avant que l'élément soit visible
-                threshold: 0.01, // Déclencher dès qu'une petite partie est visible
-            }
+            this.handleIntersection.bind(this),
+            { rootMargin: "2000px", threshold: [0, 0.1] }
         );
 
-        // Ajout d'écouteurs d'événements pour gérer les sauts de scroll et ancres
-        if (!this.scrollHandlerAdded) {
-            window.addEventListener(
-                "scroll",
-                this.handleRapidScroll.bind(this),
-                {
-                    passive: true,
-                }
-            );
-            this.scrollHandlerAdded = true;
-        }
+        this.addEventListeners();
+    }
 
-        if (!this.hashChangeHandlerAdded) {
-            window.addEventListener(
-                "hashchange",
-                this.handleHashChange.bind(this)
-            );
-            // Vérifier dès le chargement si une ancre est présente dans l'URL
-            if (window.location.hash) {
-                setTimeout(() => this.handleHashChange(), 100);
-            }
-            this.hashChangeHandlerAdded = true;
+    addEventListeners() {
+        if (this.eventListenersAdded) return;
+
+        window.addEventListener("scroll", this.handleRapidScroll, {
+            passive: true,
+        });
+        window.addEventListener("hashchange", this.handleHashChange.bind(this));
+        this.eventListenersAdded = true;
+
+        // Vérifier immédiatement s'il y a une ancre
+        if (window.location.hash) {
+            setTimeout(() => this.handleHashChange(), 100);
         }
     }
 
-    // Gestionnaire pour les changements d'ancre (hash) dans l'URL
+    removeEventListeners() {
+        if (!this.eventListenersAdded) return;
+
+        window.removeEventListener("scroll", this.handleRapidScroll);
+        window.removeEventListener("hashchange", this.handleHashChange);
+        this.eventListenersAdded = false;
+    }
+
+    // === GESTIONNAIRES D'ÉVÉNEMENTS ===
+    /*applyThemeVariables(theme) {
+        const themeConfig = this.marssel.themeManager.getThemeVariables(theme);
+
+        Object.entries(themeConfig).forEach(([varName, value]) => {
+            this.themeVariables.set(varName, value);
+        });
+
+        this.updateRootVariables();
+        this.debounceStyleUpdate();
+    }
+
+    updateRootVariables() {
+        const rootDeclarations = new Set();
+
+        this.themeVariables.forEach((value, varName) => {
+            rootDeclarations.add(`${varName}: ${value}`);
+        });
+
+        this.addDeclarationsWithMediaQuery([], ":root", rootDeclarations);
+    }*/
+
+    handleIntersection(entries) {
+        const elementsToProcess = entries.reduce((acc, entry) => {
+            if (entry.isIntersecting || entry.intersectionRatio > 0) {
+                const element = entry.target;
+                const classes = this.lazyElements.get(element);
+
+                if (classes) {
+                    acc.push({ element, classes });
+                    this.lazyElements.delete(element);
+                    this.lazyObserver.unobserve(element);
+                }
+            }
+            return acc;
+        }, []);
+
+        if (elementsToProcess.length > 0) {
+            this.processElements(elementsToProcess);
+            this.debounceStyleUpdate();
+        }
+    }
+
+    processElements(elementsToProcess) {
+        const classProcessors = {
+            hasGroupPseudo: (className) =>
+                className.startsWith("[") && className.includes("]-"),
+            hasCompactStyles: (className) => className.includes("---["),
+            hasCombined: (className) => className.includes("+"),
+            hasChildSelector: (className) => className.includes(">"),
+        };
+
+        elementsToProcess.forEach(({ classes }) => {
+            classes.forEach((className) => {
+                if (classProcessors.hasGroupPseudo(className)) {
+                    this.marssel.domManager.processGroupPseudoClass(className);
+                } else if (classProcessors.hasCompactStyles(className)) {
+                    this.marssel.domManager.processCompactStyles(className);
+                } else if (classProcessors.hasCombined(className)) {
+                    this.marssel.domManager.processCombinedClass(className);
+                } else if (classProcessors.hasChildSelector(className)) {
+                    this.marssel.domManager.processChildSelectorClass(
+                        className
+                    );
+                } else {
+                    this.marssel.domManager.processClassName(className);
+                }
+            });
+        });
+    }
+
     handleHashChange() {
         if (!this.lazyload || !window.location.hash) return;
 
-        const targetId = window.location.hash.substring(1);
-        const targetElement = document.getElementById(targetId);
-
+        const targetElement = document.getElementById(
+            window.location.hash.substring(1)
+        );
         if (targetElement) {
-            // Traiter les éléments autour de la cible de l'ancre
             this.processElementsAroundTarget(targetElement);
         }
     }
 
-    // Gestionnaire pour les défilements rapides
-    handleRapidScroll = (() => {
+    createScrollHandler() {
         let lastScrollTop = 0;
         let scrollTimeout;
-        const SCROLL_THRESHOLD = 1000; // Seuil pour détecter un scroll rapide (en pixels)
+        const SCROLL_THRESHOLD = 1000;
 
-        return function () {
+        return () => {
             if (!this.lazyload) return;
 
             clearTimeout(scrollTimeout);
@@ -131,82 +220,92 @@ export class StyleManager {
                 window.pageYOffset || document.documentElement.scrollTop;
             const scrollDelta = Math.abs(currentScrollTop - lastScrollTop);
 
-            // Si le défilement est rapide, traiter les éléments visibles
             if (scrollDelta > SCROLL_THRESHOLD) {
                 this.processVisibleElements();
             }
 
             lastScrollTop = currentScrollTop;
-
-            // Vérifie régulièrement si le défilement s'est arrêté
-            scrollTimeout = setTimeout(() => {
-                this.processVisibleElements();
-            }, 200);
+            scrollTimeout = setTimeout(
+                () => this.processVisibleElements(),
+                200
+            );
         };
-    })();
+    }
 
-    // Traite tous les éléments actuellement visibles dans la fenêtre
+    // === TRAITEMENT DES ÉLÉMENTS VISIBLES ===
     processVisibleElements() {
         if (!this.lazyload) return;
 
-        const viewportHeight = window.innerHeight;
-        const currentScrollTop =
-            window.pageYOffset || document.documentElement.scrollTop;
-        const bottomPosition = currentScrollTop + viewportHeight;
-
-        // Une marge supplémentaire pour précharger au-delà de la zone visible
+        const viewport = this.getViewportInfo();
         const extraMargin = 1000;
 
         this.lazyElements.forEach((classes, element) => {
-            const rect = element.getBoundingClientRect();
-            const elementTop = rect.top + currentScrollTop;
-            const elementBottom = elementTop + rect.height;
-
-            // Vérifier si l'élément est visible ou proche de la zone visible
-            if (
-                elementBottom >= currentScrollTop - extraMargin &&
-                elementTop <= bottomPosition + extraMargin
-            ) {
+            if (this.isElementInViewport(element, viewport, extraMargin)) {
                 this.pendingLazyElements.add(element);
             }
         });
 
-        // Démarrer le traitement par lots si ce n'est pas déjà en cours
-        if (!this.processingBatch && this.pendingLazyElements.size > 0) {
-            this.processBatch();
-        }
+        this.startBatchProcessing();
     }
 
-    // Traite les éléments autour d'une cible (pour les ancres)
     processElementsAroundTarget(targetElement) {
         if (!targetElement || !this.lazyload) return;
 
-        const viewportHeight = window.innerHeight;
-        const currentScrollTop =
-            window.pageYOffset || document.documentElement.scrollTop;
+        const viewport = this.getViewportInfo();
         const targetRect = targetElement.getBoundingClientRect();
-        const targetTop = targetRect.top + currentScrollTop;
-
-        // Zone de contexte élargie autour de la cible
-        const contextStart = targetTop - viewportHeight * 2;
-        const contextEnd = targetTop + viewportHeight * 3;
+        const targetTop = targetRect.top + viewport.scrollTop;
+        const contextStart = targetTop - viewport.height * 2;
+        const contextEnd = targetTop + viewport.height * 3;
 
         this.lazyElements.forEach((classes, element) => {
-            const rect = element.getBoundingClientRect();
-            const elementTop = rect.top + currentScrollTop;
-
+            const elementTop =
+                element.getBoundingClientRect().top + viewport.scrollTop;
             if (elementTop >= contextStart && elementTop <= contextEnd) {
                 this.pendingLazyElements.add(element);
             }
         });
 
-        // Démarrer le traitement par lots
+        this.startBatchProcessing();
+    }
+
+    getViewportInfo() {
+        const now = performance.now();
+
+        // Cache du viewport pendant 16ms (1 frame)
+        if (now - this.viewportCache.timestamp < 16) {
+            return this.viewportCache;
+        }
+
+        this.viewportCache = {
+            height: window.innerHeight,
+            scrollTop: window.pageYOffset || document.documentElement.scrollTop,
+            timestamp: now,
+            get bottomPosition() {
+                return this.scrollTop + this.height;
+            },
+        };
+
+        return this.viewportCache;
+    }
+
+    isElementInViewport(element, viewport, extraMargin) {
+        const rect = element.getBoundingClientRect();
+        const elementTop = rect.top + viewport.scrollTop;
+        const elementBottom = elementTop + rect.height;
+
+        return (
+            elementBottom >= viewport.scrollTop - extraMargin &&
+            elementTop <= viewport.bottomPosition + extraMargin
+        );
+    }
+
+    startBatchProcessing() {
         if (!this.processingBatch && this.pendingLazyElements.size > 0) {
             this.processBatch();
         }
     }
 
-    // Traite les éléments en attente par lots pour éviter de bloquer le thread principal
+    // === TRAITEMENT PAR LOTS ===
     processBatch() {
         if (!this.pendingLazyElements.size) {
             this.processingBatch = false;
@@ -214,39 +313,23 @@ export class StyleManager {
         }
 
         this.processingBatch = true;
-        const elementsToProcess = Array.from(this.pendingLazyElements).slice(
-            0,
-            this.maxBatchSize
-        );
+        const elementsToProcess = Array.from(this.pendingLazyElements)
+            .slice(0, this.maxBatchSize)
+            .map((element) => ({
+                element,
+                classes: this.lazyElements.get(element),
+            }))
+            .filter((item) => item.classes);
 
-        // Traiter le lot actuel
-        elementsToProcess.forEach((element) => {
-            const classes = this.lazyElements.get(element);
+        this.processElements(elementsToProcess);
 
-            if (classes) {
-                classes.forEach((className) => {
-                    if (className.startsWith("[") && className.includes("]-")) {
-                        this.marssel.domManager.processGroupPseudoClass(
-                            className
-                        );
-                    } else if (className.includes("+")) {
-                        this.marssel.domManager.processCombinedClass(className);
-                    } else if (className.includes("---[")) {
-                        this.marssel.domManager.processCompactStyles(className);
-                    } else {
-                        this.marssel.domManager.processClassName(className);
-                    }
-                });
-
-                // Supprimer de la liste des éléments à observer
-                this.lazyElements.delete(element);
-                this.lazyObserver.unobserve(element);
-            }
-
+        // Nettoyer les éléments traités
+        elementsToProcess.forEach(({ element }) => {
+            this.lazyElements.delete(element);
+            this.lazyObserver.unobserve(element);
             this.pendingLazyElements.delete(element);
         });
 
-        // Mettre à jour les styles après chaque lot
         this.debounceStyleUpdate();
 
         // Planifier le prochain lot
@@ -257,6 +340,7 @@ export class StyleManager {
         }
     }
 
+    // === GESTION DES STYLES ===
     ensureStyleElement() {
         if (!document.getElementById("marssel-styles")) {
             const style = document.createElement("style");
@@ -268,188 +352,80 @@ export class StyleManager {
     initializeStyleSheet() {
         this.ensureStyleElement();
 
+        const processAndUpdate = () => {
+            this.marssel.domManager.processAllElements();
+            if (this.lazyload) {
+                this.processInitialViewportElements();
+            }
+            this.updateStyles();
+        };
+
         if (this.lazyload) {
             this.initLazyObserver();
         }
 
-        requestAnimationFrame(() => {
-            this.marssel.domManager.processAllElements();
-            this.updateStyles();
-        });
+        requestAnimationFrame(processAndUpdate);
     }
 
-    // buildSelector(parsed) {
-    //     let selector = parsed.component
-    //         ? `.${parsed.component}`
-    //         : `.${parsed.finalClassName}`;
+    processInitialViewportElements() {
+        if (!this.lazyload) return;
 
-    //     if (parsed.pseudoModifiers) {
-    //         const modifiers = parsed.pseudoModifiers.split("-");
-    //         let pseudoElement = null;
-    //         const pseudoClasses = [];
+        const viewport = this.getViewportInfo();
+        const elementsToProcess = [];
 
-    //         modifiers.forEach((mod) => {
-    //             if (mod === "before" || mod === "after") {
-    //                 pseudoElement = mod;
-    //             } else {
-    //                 pseudoClasses.push(mod);
-    //             }
-    //         });
+        this.lazyElements.forEach((classes, element) => {
+            const rect = element.getBoundingClientRect();
+            const isVisible =
+                rect.top < viewport.height + 1000 && rect.bottom > -1000;
 
-    //         // Appliquer d'abord les pseudo-classes
-    //         pseudoClasses.forEach((pc) => {
-    //             selector += `:${pc}`;
-    //         });
+            if (isVisible) {
+                elementsToProcess.push({ element, classes });
+            }
+        });
 
-    //         // Puis le pseudo-élément
-    //         if (pseudoElement) {
-    //             selector += `::${pseudoElement}`;
-    //         }
-    //     }
-
-    //     return selector;
-    // }
-
-    // buildSelector(parsed) {
-    //     let selector = parsed.component
-    //         ? `.${parsed.component}`
-    //         : `.${parsed.finalClassName}`;
-
-    //     if (parsed.pseudoModifiers) {
-    //         // Scinder sur les underscores pour séparer les pseudo-classes
-    //         const modifiers = parsed.pseudoModifiers.split("_");
-    //         let pseudoElement = null;
-    //         const pseudoClasses = [];
-
-    //         modifiers.forEach((mod) => {
-    //             if (mod === "before" || mod === "after") {
-    //                 pseudoElement = mod;
-    //             } else {
-    //                 pseudoClasses.push(mod);
-    //             }
-    //         });
-
-    //         // Appliquer les pseudo-classes
-    //         pseudoClasses.forEach((pc) => {
-    //             selector += `:${pc}`;
-    //         });
-
-    //         // Ajouter le pseudo-élément
-    //         if (pseudoElement) {
-    //             selector += `::${pseudoElement}`;
-    //         }
-    //     }
-
-    //     return selector;
-    // }
-
-    // buildSelector(parsed) {
-    //     let selector = parsed.component
-    //         ? `.${parsed.component}`
-    //         : `.${parsed.finalClassName}`;
-
-    //     if (parsed.pseudoModifiers) {
-    //         // Séparer les pseudo-classes et paramètres
-    //         const modifiers = parsed.pseudoModifiers.split(/(?<!\[)_(?!\])/); // Ignorer les underscores dans les paramètres
-    //         let pseudoElement = null;
-    //         const pseudoParts = [];
-
-    //         modifiers.forEach((mod) => {
-    //             // Gérer les pseudo-éléments
-    //             if (mod === "before" || mod === "after") {
-    //                 pseudoElement = mod;
-    //             }
-    //             // Convertir la syntaxe Marssel [param] en (param)
-    //             else if (mod.includes("[")) {
-    //                 pseudoParts.push(
-    //                     mod.replace(/\[/g, "(").replace(/\]/g, ")")
-    //                 );
-    //             } else {
-    //                 pseudoParts.push(mod);
-    //             }
-    //         });
-
-    //         // Construire la chaîne de pseudo-classes
-    //         pseudoParts.forEach((pc) => {
-    //             selector += `:${pc.replace(/-/g, ":")}`; // Convertir les tirets en :
-    //         });
-
-    //         // Ajouter le pseudo-élément
-    //         if (pseudoElement) {
-    //             selector += `::${pseudoElement}`;
-    //         }
-    //     }
-
-    //     return selector;
-    // }
+        if (elementsToProcess.length > 0) {
+            this.processElements(elementsToProcess);
+            elementsToProcess.forEach(({ element }) => {
+                this.lazyElements.delete(element);
+                this.lazyObserver.unobserve(element);
+            });
+        }
+    }
 
     buildSelector(parsed) {
-        let selector = parsed.component
+        const baseSelector = parsed.component
             ? `.${parsed.component}`
             : `.${parsed.finalClassName.replace(/\+/g, "\\+")}`;
 
-        if (parsed.pseudoModifiers) {
-            // Nouveau split qui préserve les pseudo-classes composées
-            const modifiers = parsed.pseudoModifiers.split(
-                /(?<!\[|\(|:)_(?!\]|\)|:)/
-            );
+        if (!parsed.pseudoModifiers) return baseSelector;
 
-            modifiers.forEach((mod) => {
-                // Conversion spéciale pour les pseudo-classes composées
-                const converted = mod.replace(
-                    /([a-z]+)-([a-z]+)/g,
-                    (match, p1, p2) => {
-                        const fullName = `${p1}-${p2}`;
-                        // Liste des pseudo-classes composées officielles
-                        const compoundPseudos = [
-                            "any-link",
-                            "focus-visible",
-                            "focus-within",
-                            "local-link",
-                            "target-within",
-                            "user-invalid",
-                            "first-child",
-                            "last-child",
-                            "only-child",
-                            "first-of-type",
-                            "last-of-type",
-                            "only-of-type",
-                            "nth-child",
-                            "nth-last-child",
-                            "nth-of-type",
-                            "nth-last-of-type",
-                            "placeholder-shown",
-                            "read-only",
-                            "read-write",
-                        ];
+        const modifiers = parsed.pseudoModifiers.split(
+            /(?<!\[|\(|:)_(?!\]|\)|:)/
+        );
+        const pseudoSelectors = modifiers.map((mod) => {
+            const converted = this.convertPseudoClass(mod);
+            return this.formatPseudoSelector(converted);
+        });
 
-                        return compoundPseudos.includes(fullName)
-                            ? fullName
-                            : match;
-                    }
-                );
-
-                // Gestion des paramètres et conversion finale
-                selector += converted.includes("[")
-                    ? `:${converted
-                          .replace(/\[/g, "(")
-                          .replace(/\]/g, ")")
-                          .replace(/_/g, " ")}`
-                    : `:${converted.replace(/-/g, "-")}`;
-            });
-        }
-
-        return selector;
+        return baseSelector + pseudoSelectors.join("");
     }
 
-    wrapWithMediaQuery(selector, declaration, breakpoints) {
-        if (!breakpoints?.length) return `${selector} { ${declaration} }`;
-
-        const mediaQuery = buildMediaQuery(breakpoints);
-        return `@media ${mediaQuery} { ${selector} { ${declaration} } }`;
+    convertPseudoClass(mod) {
+        return mod.replace(/([a-z]+)-([a-z]+)/g, (match, p1, p2) => {
+            const fullName = `${p1}-${p2}`;
+            return this.compoundPseudos.has(fullName) ? fullName : match;
+        });
     }
 
-    // === Méthodes de base ===
+    formatPseudoSelector(converted) {
+        return converted.includes("[")
+            ? `:${converted
+                  .replace(/\[/g, "(")
+                  .replace(/\]/g, ")")
+                  .replace(/_/g, " ")}`
+            : `:${converted}`;
+    }
+
     addFontFace(cssText) {
         this.fontFaces.add(cssText);
     }
@@ -458,36 +434,41 @@ export class StyleManager {
         const styleElement = document.getElementById("marssel-styles");
         if (!styleElement) return;
 
-        let css = [];
+        const css = [
+            ...this.fontFaces,
+            ...this.generateRegularRules(),
+            ...this.generateMediaQueryRules(),
+        ];
 
-        // Ajouter les @font-face en premier
-        if (this.fontFaces.size > 0) {
-            css.push(Array.from(this.fontFaces).join("\n"));
-        }
+        styleElement.textContent = css.join("\n");
+    }
 
-        // Traiter d'abord les règles sans media queries
+    generateRegularRules() {
+        const rules = [];
         this.selectorDeclarations.forEach((declarations, selector) => {
             if (!selector.startsWith("@media")) {
-                css.push(
+                rules.push(
                     `${selector} { ${Array.from(declarations).join("; ")} }`
                 );
             }
         });
+        return rules;
+    }
 
-        // Traiter ensuite les media queries
+    generateMediaQueryRules() {
+        const rules = [];
         this.selectorDeclarations.forEach((mediaQuerySelectors, mediaQuery) => {
             if (mediaQuery.startsWith("@media")) {
-                let mediaQueryRules = [];
+                const mediaQueryRules = [];
                 mediaQuerySelectors.forEach((declarations, selector) => {
                     mediaQueryRules.push(
                         `${selector} { ${Array.from(declarations).join("; ")} }`
                     );
                 });
-                css.push(`${mediaQuery} { ${mediaQueryRules.join(" ")} }`);
+                rules.push(`${mediaQuery} { ${mediaQueryRules.join(" ")} }`);
             }
         });
-
-        styleElement.textContent = css.join("\n");
+        return rules;
     }
 
     addDefaultStyles() {
@@ -496,57 +477,39 @@ export class StyleManager {
             return;
         }
 
-        // Règles box-sizing pour tous les éléments
-        const boxSizingDeclarations = new Set();
-        boxSizingDeclarations.add("box-sizing: border-box");
-        this.addDeclarationsWithMediaQuery([], "*", boxSizingDeclarations);
-        this.addDeclarationsWithMediaQuery(
-            [],
-            "*::before",
-            boxSizingDeclarations
-        );
-        this.addDeclarationsWithMediaQuery(
-            [],
-            "*::after",
-            boxSizingDeclarations
-        );
+        // Box-sizing pour tous les éléments
+        const boxSizingDeclarations = new Set(["box-sizing: border-box"]);
+        ["*", "*::before", "*::after"].forEach((selector) => {
+            this.addDeclarationsWithMediaQuery(
+                [],
+                selector,
+                boxSizingDeclarations
+            );
+        });
 
-        // Variable :root pour la taille des icônes
-        const rootDeclarations = new Set();
-        const iconSize = this.marssel.iconManager.sizes.medium;
-        rootDeclarations.add(`--icon-size: ${iconSize}`);
+        // Variable CSS pour la taille des icônes
+        const rootDeclarations = new Set([
+            `--icon-size: ${this.marssel.iconManager.sizes.medium}`,
+        ]);
         this.addDeclarationsWithMediaQuery([], ":root", rootDeclarations);
-
         this.updateStyles();
+    }
+
+    createDebouncer(delay) {
+        let timeout;
+        return () => {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => this.updateStyles(), delay);
+        };
     }
 
     addStyleRule(parsed) {
         const rule = this.generateRule(parsed);
-
         if (rule) {
             this.styleSheet.add(rule);
-
-            // Déclencher la mise à jour des styles si nécessaire
             this.debounceStyleUpdate();
         }
     }
-
-    // Optimisation du debouncing des mises à jour de style
-    debounceStyleUpdate = (() => {
-        let timeout;
-        const DEBOUNCE_DELAY = 16; // ~1 frame à 60fps
-
-        return () => {
-            if (timeout) {
-                clearTimeout(timeout);
-            }
-
-            timeout = setTimeout(() => {
-                this.updateStyles();
-                timeout = null;
-            }, DEBOUNCE_DELAY);
-        };
-    })();
 
     generateRule(parsed) {
         const cacheKey = JSON.stringify(parsed);
@@ -554,219 +517,9 @@ export class StyleManager {
             return this.compiledRules.get(cacheKey);
         }
 
-        let rule = "";
-        const { property, value } = parsed;
         const selector = this.buildSelector(parsed);
-        let declarations = new Set();
+        const declarations = this.generateDeclarations(parsed, selector);
 
-        // Gestion des icônes
-        if (property === "icon-size") {
-            const size = this.marssel.iconManager.sizes[value] || value;
-            declarations.add(`--icon-size: ${size}`);
-        } else if (parsed.property === "icon") {
-            declarations = this.marssel.iconManager.createIconStyles(
-                selector,
-                parsed.finalClassName
-            );
-        } else if (parsed.property === "font") {
-            const match = value.match(/^(.*?)(?:\[(\d*)(?:_(.*?))?\])?$/);
-            if (match) {
-                const fontFamily = match[1].replace(/_/g, " ");
-                const fontWeight =
-                    match[2] && match[2] !== "" ? match[2] : "400";
-                const fontStyle = match[3] === "italic" ? "italic" : "normal";
-
-                this.marssel.fontManager.handleFont(fontFamily, fontWeight);
-
-                declarations.add(`font-family: '${fontFamily}', sans-serif`);
-                declarations.add(`font-weight: ${fontWeight}`);
-                declarations.add(`font-style: ${fontStyle}`);
-            }
-        }
-
-        // Gestion spéciale pour les propriétés transform
-        else if (property === "transform") {
-            declarations.add(`transform: ${cleanValue(value)}`);
-        }
-
-        // Handle gutters
-        else if (["gutter", "gutter-x", "gutter-y"].includes(property)) {
-            const direction = property.split("-")[1] || "all";
-            const gutterValue = parseGutterValue(value);
-            if (!gutterValue) return "";
-
-            // Parent gutter declarations
-            if (direction === "x" || direction === "all") {
-                declarations.add(`margin-left: -${gutterValue}`);
-                declarations.add(`margin-right: -${gutterValue}`);
-            }
-            if (direction === "y" || direction === "all") {
-                declarations.add(`margin-top: -${gutterValue}`);
-                declarations.add(`margin-bottom: -${gutterValue}`);
-            }
-
-            // Child selector declarations
-            const childSelector = `${selector} > [class*="col-"]`;
-            const childDeclarations = new Set();
-            if (direction === "x" || direction === "all") {
-                childDeclarations.add(`padding-left: ${gutterValue}`);
-                childDeclarations.add(`padding-right: ${gutterValue}`);
-            }
-            if (direction === "y" || direction === "all") {
-                childDeclarations.add(`padding-top: ${gutterValue}`);
-                childDeclarations.add(`padding-bottom: ${gutterValue}`);
-            }
-            childDeclarations.add("box-sizing: border-box");
-
-            // Handle media queries for both parent and child
-            this.addDeclarationsWithMediaQuery(
-                parsed.breakpoints,
-                selector,
-                declarations
-            );
-            this.addDeclarationsWithMediaQuery(
-                parsed.breakpoints,
-                childSelector,
-                childDeclarations
-            );
-        }
-
-        // Handle column system
-        else if (property === "col") {
-            switch (value) {
-                case "container":
-                    declarations.add("width: 100%");
-                    declarations.add("margin: 0 auto");
-                    declarations.add("padding: 0 12px");
-
-                    if (parsed.breakpoints.length > 0) {
-                        parsed.breakpoints.forEach((bp) => {
-                            const maxWidth =
-                                this.marssel.constructor.containerMaxWidths[bp];
-                            if (maxWidth) {
-                                declarations.add(`max-width: ${maxWidth}`);
-                            }
-                        });
-                    } else {
-                        // Add all container max-widths as separate media queries
-                        Object.entries(
-                            this.marssel.constructor.containerMaxWidths
-                        ).forEach(([bp, width]) => {
-                            const mediaQuery = `(min-width: ${this.marssel.constructor.breakpoints[bp]})`;
-                            const mediaQueryKey = `@media ${mediaQuery}`;
-                            const mediaSelector = selector;
-
-                            if (!this.selectorDeclarations.has(mediaQueryKey)) {
-                                this.selectorDeclarations.set(
-                                    mediaQueryKey,
-                                    new Map()
-                                );
-                            }
-
-                            const mediaSelectors =
-                                this.selectorDeclarations.get(mediaQueryKey);
-                            if (!mediaSelectors.has(mediaSelector)) {
-                                mediaSelectors.set(mediaSelector, new Set());
-                            }
-
-                            mediaSelectors
-                                .get(mediaSelector)
-                                .add(`max-width: ${width}`);
-                        });
-                    }
-                    break;
-
-                case "row":
-                    declarations.add("display: flex");
-                    declarations.add("flex-wrap: wrap");
-                    declarations.add("margin-right: -12px");
-                    declarations.add("margin-left: -12px");
-
-                    // Child row elements
-                    const childSelector = `${selector} > *`;
-                    const childDeclarations = new Set();
-                    childDeclarations.add("padding-right: 12px");
-                    childDeclarations.add("padding-left: 12px");
-
-                    this.addDeclarationsWithMediaQuery(
-                        parsed.breakpoints,
-                        selector,
-                        declarations
-                    );
-                    this.addDeclarationsWithMediaQuery(
-                        parsed.breakpoints,
-                        childSelector,
-                        childDeclarations
-                    );
-                    break;
-
-                default:
-                    if (value === "auto") {
-                        declarations.add("flex: 0 0 auto");
-                        declarations.add("width: auto");
-                        declarations.add("max-width: 100%");
-                    } else {
-                        const numericValue = parseInt(cleanValue(value));
-                        const percentage =
-                            ((numericValue / 12) * 100).toFixed(4) + "%";
-
-                        if (parsed.breakpoints.length > 0) {
-                            // Responsive column
-                            declarations.add(`flex: 0 0 ${percentage}`);
-                            declarations.add(`max-width: ${percentage}`);
-                        } else {
-                            // Base column (full width)
-                            declarations.add("flex: 0 0 100%");
-                            declarations.add("max-width: 100%");
-                            declarations.add("width: 100%");
-                        }
-                    }
-                    break;
-            }
-        } else if (property === "content") {
-            // Traitement spécial pour la propriété content
-            declarations.add(
-                `content: "${cleanValue(value.replace(/_/g, " "))}"`
-            );
-        } else if (property === "bg-linear") {
-            // Traitement du dégradé linéaire
-            const cleanedValue = cleanValue(value);
-            declarations.add(`background: linear-gradient(${cleanedValue})`);
-        } else if (property === "bg-radial") {
-            // Traitement du dégradé radial
-            const cleanedValue = cleanValue(value);
-            declarations.add(`background: radial-gradient(${cleanedValue})`);
-        }
-        // 3. Gestion des autres propriétés
-        else {
-            // 3a. Propriétés personnalisées (non définies dans Marssel.properties)
-            if (!this.marssel.constructor.properties[property]) {
-                const formattedProperty = property.replace(/_/g, "-");
-                let cssValue = cleanValue(value);
-                declarations.add(`${formattedProperty}: ${cssValue}`);
-            } else {
-                let cssValue = cleanValue(value);
-                let cssProperty = this.marssel.constructor.properties[property];
-
-                if (
-                    ["bg", "c"].includes(property) ||
-                    property.startsWith("bg-") ||
-                    property.startsWith("c-")
-                ) {
-                    cssValue = this.marssel.domManager.processColor(cssValue);
-                }
-
-                if (Array.isArray(cssProperty)) {
-                    cssProperty.forEach((prop) => {
-                        declarations.add(`${prop}: ${cssValue}`);
-                    });
-                } else {
-                    declarations.add(`${cssProperty}: ${cssValue}`);
-                }
-            }
-        }
-
-        // Add declarations to selectorDeclarations
         if (declarations.size > 0) {
             this.addDeclarationsWithMediaQuery(
                 parsed.breakpoints,
@@ -775,69 +528,248 @@ export class StyleManager {
             );
         }
 
+        const rule = "";
         this.compiledRules.set(cacheKey, rule);
         return rule;
     }
 
-    // addDeclarationsWithMediaQuery(breakpoints, selector, declarations) {
-    //     if (breakpoints.length > 0) {
-    //         const mediaQuery = buildMediaQuery(breakpoints);
-    //         const mediaQueryKey = `@media ${mediaQuery}`;
+    generateDeclarations(parsed, selector) {
+        const { property, value } = parsed;
+        const declarations = new Set();
 
-    //         if (!this.selectorDeclarations.has(mediaQueryKey)) {
-    //             this.selectorDeclarations.set(mediaQueryKey, new Map());
-    //         }
+        const handler = this.propertyHandlers[property];
+        if (handler) {
+            handler(value, declarations, selector, parsed);
+        } else {
+            this.handleGenericProperty(parsed, declarations);
+        }
 
-    //         const mediaSelectors = this.selectorDeclarations.get(mediaQueryKey);
-    //         if (!mediaSelectors.has(selector)) {
-    //             mediaSelectors.set(selector, new Set());
-    //         }
+        return declarations;
+    }
 
-    //         declarations.forEach((decl) => {
-    //             if (!mediaSelectors.get(selector).has(decl)) {
-    //                 mediaSelectors.get(selector).add(decl);
-    //             }
-    //         });
-    //     } else {
-    //         if (!this.selectorDeclarations.has(selector)) {
-    //             this.selectorDeclarations.set(selector, new Set());
-    //         }
+    handleIconSize(value, declarations) {
+        const size = this.marssel.iconManager.sizes[value] || value;
+        declarations.add(`--icon-size: ${size}`);
+    }
 
-    //         declarations.forEach((decl) => {
-    //             this.selectorDeclarations.get(selector).add(decl);
-    //         });
-    //     }
-    // }
+    handleIcon(selector, parsed, declarations) {
+        const iconDeclarations = this.marssel.iconManager.createIconStyles(
+            selector,
+            parsed.finalClassName
+        );
+        if (iconDeclarations?.size > 0) {
+            iconDeclarations.forEach((decl) => declarations.add(decl));
+        }
+    }
+
+    handleFont(value, declarations) {
+        const match = value.match(/^(.*?)(?:\[(\d*)(?:_(.*?))?\])?$/);
+        if (!match) return;
+
+        const fontFamily = match[1].replace(/_/g, " ");
+        const fontWeight = match[2] && match[2] !== "" ? match[2] : "400";
+        const fontStyle = match[3] === "italic" ? "italic" : "normal";
+
+        this.marssel.fontManager.handleFont(fontFamily, fontWeight);
+
+        declarations.add(`font-family: '${fontFamily}', sans-serif`);
+        declarations.add(`font-weight: ${fontWeight}`);
+        declarations.add(`font-style: ${fontStyle}`);
+    }
+
+    handleGutter(parsed, selector, declarations) {
+        const { property, value } = parsed;
+        const direction = property.split("-")[1] || "all";
+        const gutterValue = parseGutterValue(value);
+
+        if (!gutterValue) return;
+
+        this.addGutterDeclarations(
+            declarations,
+            direction,
+            gutterValue,
+            "margin"
+        );
+
+        const childSelector = `${selector} > [class*="col-"]`;
+        const childDeclarations = new Set(["box-sizing: border-box"]);
+        this.addGutterDeclarations(
+            childDeclarations,
+            direction,
+            gutterValue,
+            "padding"
+        );
+
+        this.addDeclarationsWithMediaQuery(
+            parsed.breakpoints,
+            childSelector,
+            childDeclarations
+        );
+    }
+
+    addGutterDeclarations(declarations, direction, gutterValue, type) {
+        const prefix = type === "margin" ? "-" : "";
+        const directions = {
+            x: ["left", "right"],
+            y: ["top", "bottom"],
+            all: ["top", "right", "bottom", "left"],
+        };
+
+        (directions[direction] || []).forEach((dir) => {
+            declarations.add(`${type}-${dir}: ${prefix}${gutterValue}`);
+        });
+    }
+
+    handleColumn(parsed, selector, declarations) {
+        const { value } = parsed;
+        const columnHandlers = {
+            container: () =>
+                this.handleContainerColumn(parsed, selector, declarations),
+            row: () => this.handleRowColumn(parsed, selector, declarations),
+        };
+
+        const handler = columnHandlers[value];
+        if (handler) {
+            handler();
+        } else {
+            this.handleRegularColumn(parsed, value, declarations);
+        }
+    }
+
+    handleContainerColumn(parsed, selector, declarations) {
+        declarations.add("width: 100%");
+        declarations.add("margin: 0 auto");
+        declarations.add("padding: 0 12px");
+
+        if (parsed.breakpoints.length === 0) {
+            Object.entries(this.marssel.constructor.containerMaxWidths).forEach(
+                ([bp, width]) => {
+                    const mediaQuery = `(min-width: ${this.marssel.constructor.breakpoints[bp]})`;
+                    const mediaQueryKey = `@media ${mediaQuery}`;
+
+                    this.ensureMediaQuery(mediaQueryKey, selector);
+                    this.selectorDeclarations
+                        .get(mediaQueryKey)
+                        .get(selector)
+                        .add(`max-width: ${width}`);
+                }
+            );
+        }
+    }
+
+    handleRowColumn(parsed, selector, declarations) {
+        declarations.add("display: flex");
+        declarations.add("flex-wrap: wrap");
+        declarations.add("margin-right: -12px");
+        declarations.add("margin-left: -12px");
+
+        const childDeclarations = new Set([
+            "padding-right: 12px",
+            "padding-left: 12px",
+        ]);
+        this.addDeclarationsWithMediaQuery(
+            parsed.breakpoints,
+            `${selector} > *`,
+            childDeclarations
+        );
+    }
+
+    handleRegularColumn(parsed, value, declarations) {
+        if (value === "auto") {
+            declarations.add("flex: 0 0 auto");
+            declarations.add("width: auto");
+            declarations.add("max-width: 100%");
+        } else {
+            const numericValue = parseInt(cleanValue(value));
+            const percentage = ((numericValue / 12) * 100).toFixed(4) + "%";
+
+            if (parsed.breakpoints.length > 0) {
+                declarations.add(`flex: 0 0 ${percentage}`);
+                declarations.add(`max-width: ${percentage}`);
+            } else {
+                declarations.add("flex: 0 0 100%");
+                declarations.add("max-width: 100%");
+                declarations.add("width: 100%");
+            }
+        }
+    }
+
+    handleGenericProperty(parsed, declarations) {
+        const { property, value } = parsed;
+
+        if (value.startsWith("theme-")) {
+            const cssValue = `var(--${value})`;
+            const cssProperty =
+                this.marssel.constructor.properties[property] ||
+                property.replace(/_/g, "-");
+
+            if (Array.isArray(cssProperty)) {
+                cssProperty.forEach((prop) =>
+                    declarations.add(`${prop}: ${cssValue}`)
+                );
+            } else {
+                declarations.add(`${cssProperty}: ${cssValue}`);
+            }
+            return;
+        }
+
+        if (!this.marssel.constructor.properties[property]) {
+            const formattedProperty = property.replace(/_/g, "-");
+            declarations.add(`${formattedProperty}: ${cleanValue(value)}`);
+        } else {
+            let cssValue = cleanValue(value);
+            const cssProperty = this.marssel.constructor.properties[property];
+
+            if (this.isColorProperty(property)) {
+                cssValue = this.marssel.domManager.processColor(cssValue);
+            }
+
+            if (Array.isArray(cssProperty)) {
+                cssProperty.forEach((prop) =>
+                    declarations.add(`${prop}: ${cssValue}`)
+                );
+            } else {
+                declarations.add(`${cssProperty}: ${cssValue}`);
+            }
+        }
+    }
+
+    isColorProperty(property) {
+        return (
+            ["bg", "c"].includes(property) ||
+            property.startsWith("bg-") ||
+            property.startsWith("c-")
+        );
+    }
+
+    ensureMediaQuery(mediaQueryKey, selector) {
+        if (!this.selectorDeclarations.has(mediaQueryKey)) {
+            this.selectorDeclarations.set(mediaQueryKey, new Map());
+        }
+
+        const mediaSelectors = this.selectorDeclarations.get(mediaQueryKey);
+        if (!mediaSelectors.has(selector)) {
+            mediaSelectors.set(selector, new Set());
+        }
+    }
 
     addDeclarationsWithMediaQuery(breakpoints, selector, declarations) {
-        if (breakpoints && breakpoints.length > 0) {
-            // Attempt to build a media query
+        if (breakpoints?.length > 0) {
             const mediaQuery = buildMediaQuery(breakpoints);
-
-            // Only proceed if we got a valid media query back
             if (mediaQuery) {
                 const mediaQueryKey = `@media ${mediaQuery}`;
-
-                if (!this.selectorDeclarations.has(mediaQueryKey)) {
-                    this.selectorDeclarations.set(mediaQueryKey, new Map());
-                }
-
-                const mediaSelectors =
-                    this.selectorDeclarations.get(mediaQueryKey);
-                if (!mediaSelectors.has(selector)) {
-                    mediaSelectors.set(selector, new Set());
-                }
+                this.ensureMediaQuery(mediaQueryKey, selector);
 
                 declarations.forEach((decl) => {
-                    if (!mediaSelectors.get(selector).has(decl)) {
-                        mediaSelectors.get(selector).add(decl);
-                    }
+                    this.selectorDeclarations
+                        .get(mediaQueryKey)
+                        .get(selector)
+                        .add(decl);
                 });
                 return;
             }
         }
 
-        // No valid breakpoints or invalid media query, add to main stylesheet
         if (!this.selectorDeclarations.has(selector)) {
             this.selectorDeclarations.set(selector, new Set());
         }
@@ -847,60 +779,43 @@ export class StyleManager {
         });
     }
 
-    // Dans StyleManager.js
     setLazyload(enabled) {
-        // Si on active le lazyload
-        if (enabled && !this.lazyload) {
+        if (enabled === this.lazyload) return;
+
+        if (enabled) {
             this.lazyload = true;
             this.initLazyObserver();
-
-            // Réinitialiser le traitement des éléments
-            document.querySelectorAll("*").forEach((element) => {
-                this.marssel.domManager.processElement(element);
-            });
-        }
-        // Si on désactive le lazyload
-        else if (!enabled && this.lazyload) {
+            this.reprocessAllElements();
+        } else {
             this.lazyload = false;
-
-            // Traiter tous les éléments en attente
-            this.lazyElements.forEach((classes, element) => {
-                classes.forEach((className) => {
-                    if (className.startsWith("[") && className.includes("]-")) {
-                        this.marssel.domManager.processGroupPseudoClass(
-                            className
-                        );
-                    } else if (className.includes("+")) {
-                        this.marssel.domManager.processCombinedClass(className);
-                    } else if (className.includes("---[")) {
-                        this.marssel.domManager.processCompactStyles(className);
-                    } else {
-                        this.marssel.domManager.processClassName(className);
-                    }
-                });
-            });
-
-            // Vider également les éléments en attente
-            this.pendingLazyElements.clear();
-
-            // Vider la liste et désactiver l'observer
-            this.lazyElements.clear();
-            if (this.lazyObserver) {
-                this.lazyObserver.disconnect();
-            }
-
-            // Supprimer les écouteurs d'événements si nécessaire
-            if (this.scrollHandlerAdded) {
-                window.removeEventListener("scroll", this.handleRapidScroll);
-                this.scrollHandlerAdded = false;
-            }
-
-            if (this.hashChangeHandlerAdded) {
-                window.removeEventListener("hashchange", this.handleHashChange);
-                this.hashChangeHandlerAdded = false;
-            }
-
-            this.updateStyles();
+            this.processAllPendingElements();
+            this.cleanup();
         }
+    }
+
+    reprocessAllElements() {
+        document.querySelectorAll("*").forEach((element) => {
+            this.marssel.domManager.processElement(element);
+        });
+    }
+
+    processAllPendingElements() {
+        this.lazyElements.forEach((classes, element) => {
+            this.processElements([{ element, classes }]);
+        });
+
+        this.pendingLazyElements.clear();
+        this.lazyElements.clear();
+        this.updateStyles();
+    }
+
+    cleanup() {
+        if (this.lazyObserver) {
+            this.lazyObserver.disconnect();
+            this.lazyObserver = null;
+        }
+
+        this.removeEventListeners();
+        this.processingBatch = false;
     }
 }

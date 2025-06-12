@@ -20,6 +20,12 @@ import { CarouselManager } from 'marssel';
 const carousel = new CarouselManager();
 ```
 
+## Création de deux fichiers manifest.json
+
+Dans le dossier public/js, créer deux fichiers : 
+- fonts-manifest.json
+- icons-manifest.json
+
 ### 6. Script de build (optionnel)
 
 Si vous souhaitez bundler votre code pour une meilleure compatibilité, créez un fichier `build.js`:

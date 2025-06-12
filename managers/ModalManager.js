@@ -2,118 +2,59 @@ export class ModalManager {
     constructor(marssel) {
         this.marssel = marssel;
         this.overlay = null;
-        this.openModals = new Set(); // Suivi efficace des modales ouvertes
-        this.scrollbarWidth = 0;
-        this.isInitialized = false;
-
-        // Cache des éléments pour éviter les querySelector répétés
-        this.modalCache = new Map();
-
-        // Event handlers bindés pour pouvoir les supprimer
-        this.boundOverlayClick = this.handleOverlayClick.bind(this);
-        this.boundKeyDown = this.handleKeyDown.bind(this);
-
-        // Configuration par défaut
-        this.config = {
-            closeOnOverlay: true,
-            closeOnEscape: true,
-            preventBodyScroll: true,
-            animationDuration: 300,
-        };
+        this.openModals = new Set(); // Suivi des modales ouvertes
+        this.modalCache = new Map(); // Cache des éléments pour éviter les querySelector répétés
+        this.boundCloseOnOverlay = this.closeAllModals.bind(this);
+        this.boundCloseOnEscape = this.handleEscapeKey.bind(this);
     }
 
     init() {
-        if (this.isInitialized) return;
-
         this.overlay = document.getElementById("modal-overlay");
+
         if (!this.overlay) {
-            console.warn("Modal overlay not found");
+            console.warn("Modal overlay element not found");
             return;
         }
 
-        // Calcul de la largeur de la scrollbar une seule fois
-        this.calculateScrollbarWidth();
+        // Exposition des méthodes globales avec arrow functions pour préserver le contexte
+        window.openModal = (id) => this.openModal(id);
+        window.closeModal = (id) => this.closeModal(id);
 
-        // Pré-cache des modales existantes
-        this.cacheExistingModals();
-
-        // Event listeners
-        this.addEventListeners();
-
-        // Exposition des méthodes globales (avec namespace pour éviter les conflits)
-        if (!window.ModalAPI) {
-            window.ModalAPI = {
-                open: (id) => this.openModal(id),
-                close: (id) => this.closeModal(id),
-                closeAll: () => this.closeAllModals(),
-                isOpen: (id) => this.isModalOpen(id),
-            };
-        }
-
-        this.isInitialized = true;
-    }
-
-    calculateScrollbarWidth() {
-        // Calcul optimisé de la largeur de scrollbar
-        const outer = document.createElement("div");
-        outer.style.cssText =
-            "position:absolute;top:-9999px;width:50px;height:50px;overflow:scroll;";
-        document.body.appendChild(outer);
-        this.scrollbarWidth = outer.offsetWidth - outer.clientWidth;
-        document.body.removeChild(outer);
-    }
-
-    cacheExistingModals() {
-        // Pré-cache toutes les modales existantes
-        document.querySelectorAll('[id^="modal-"]').forEach((modal) => {
-            this.modalCache.set(modal.id, modal);
+        // Événements avec gestion optimisée
+        this.overlay.addEventListener("click", this.boundCloseOnOverlay, {
+            passive: true,
+        });
+        document.addEventListener("keydown", this.boundCloseOnEscape, {
+            passive: false,
         });
     }
 
-    addEventListeners() {
-        if (this.config.closeOnOverlay) {
-            this.overlay.addEventListener("click", this.boundOverlayClick);
-        }
-
-        if (this.config.closeOnEscape) {
-            document.addEventListener("keydown", this.boundKeyDown);
-        }
-    }
-
-    removeEventListeners() {
-        this.overlay?.removeEventListener("click", this.boundOverlayClick);
-        document.removeEventListener("keydown", this.boundKeyDown);
-    }
-
-    handleOverlayClick(event) {
-        // S'assurer que le clic est bien sur l'overlay et pas sur le contenu
-        if (event.target === this.overlay) {
-            this.closeAllModals();
-        }
-    }
-
-    handleKeyDown(event) {
-        if (event.key === "Escape" && this.openModals.size > 0) {
-            event.preventDefault();
-            this.closeTopModal(); // Ferme seulement la modale du dessus
-        }
-    }
-
-    getModal(id) {
-        // Utilise le cache ou fait un querySelector si nécessaire
+    /**
+     * Récupère un élément modal avec mise en cache
+     * @param {string} id - ID de la modale
+     * @returns {HTMLElement|null}
+     */
+    getModalElement(id) {
         if (!this.modalCache.has(id)) {
             const modal = document.getElementById(id);
             if (modal) {
                 this.modalCache.set(id, modal);
             }
+            return modal;
         }
         return this.modalCache.get(id);
     }
 
-    openModal(id, options = {}) {
-        const modal = this.getModal(id);
+    /**
+     * Ouvre une modale
+     * @param {string} id - ID de la modale à ouvrir
+     * @returns {boolean} - True si la modale a été ouverte avec succès
+     */
+    openModal(id) {
+        const modal = this.getModalElement(id);
+
         if (!modal) {
-            console.warn(`Modal ${id} not found`);
+            console.warn(`Modal with id "${id}" not found`);
             return false;
         }
 
@@ -122,57 +63,51 @@ export class ModalManager {
             return true;
         }
 
-        const config = { ...this.config, ...options };
-
-        // Affichage de l'overlay (sauf pour fullscreen)
+        // Gestion spéciale pour la modale fullscreen
         if (id !== "modal-fullscreen") {
             this.showOverlay();
         }
 
-        // Affichage de la modale
-        this.showModal(modal, config);
-
-        // Ajout au Set des modales ouvertes
+        this.showModal(modal);
         this.openModals.add(id);
-
-        // Gestion du scroll
-        if (config.preventBodyScroll) {
-            this.disableBodyScroll();
-        }
-
-        // Event personnalisé
-        this.dispatchModalEvent("modalOpened", { modalId: id, modal });
+        this.disableBodyScroll();
 
         return true;
     }
 
+    /**
+     * Ferme une modale spécifique
+     * @param {string} id - ID de la modale à fermer
+     * @returns {boolean} - True si la modale a été fermée avec succès
+     */
     closeModal(id) {
-        const modal = this.getModal(id);
+        const modal = this.getModalElement(id);
+
         if (!modal || !this.openModals.has(id)) {
             return false;
         }
 
-        // Animation de fermeture
         this.hideModal(modal);
-
-        // Retrait du Set
         this.openModals.delete(id);
 
-        // Gestion de l'overlay et du scroll
-        this.updateOverlayState();
-
-        // Event personnalisé
-        this.dispatchModalEvent("modalClosed", { modalId: id, modal });
+        // Si aucune modale n'est ouverte, nettoyer l'état
+        if (this.openModals.size === 0) {
+            this.hideOverlay();
+            this.enableBodyScroll();
+        }
 
         return true;
     }
 
+    /**
+     * Ferme toutes les modales ouvertes
+     */
     closeAllModals() {
-        // Fermeture optimisée de toutes les modales
-        const modalsToClose = Array.from(this.openModals);
+        // Créer une copie du Set pour éviter les modifications pendant l'itération
+        const modalsToClose = [...this.openModals];
 
         modalsToClose.forEach((id) => {
-            const modal = this.getModal(id);
+            const modal = this.getModalElement(id);
             if (modal) {
                 this.hideModal(modal);
             }
@@ -181,134 +116,110 @@ export class ModalManager {
         this.openModals.clear();
         this.hideOverlay();
         this.enableBodyScroll();
-
-        // Event personnalisé
-        this.dispatchModalEvent("allModalsClosed", {
-            closedModals: modalsToClose,
-        });
     }
 
-    closeTopModal() {
-        // Ferme la dernière modale ouverte (pour Escape)
-        const modalIds = Array.from(this.openModals);
-        if (modalIds.length > 0) {
-            const topModalId = modalIds[modalIds.length - 1];
-            this.closeModal(topModalId);
+    /**
+     * Gestion de la touche Échap
+     * @param {KeyboardEvent} event
+     */
+    handleEscapeKey(event) {
+        if (event.key === "Escape" && this.openModals.size > 0) {
+            event.preventDefault();
+            this.closeAllModals();
         }
     }
 
+    /**
+     * Affiche l'overlay
+     */
     showOverlay() {
         if (this.overlay) {
             this.overlay.style.display = "block";
-            // Force reflow pour l'animation
-            this.overlay.offsetHeight;
-            this.overlay.style.opacity = "1";
         }
     }
 
+    /**
+     * Cache l'overlay
+     */
     hideOverlay() {
         if (this.overlay) {
-            this.overlay.style.opacity = "0";
-            setTimeout(() => {
-                if (this.openModals.size === 0) {
-                    this.overlay.style.display = "none";
-                }
-            }, this.config.animationDuration);
+            this.overlay.style.display = "none";
         }
     }
 
-    showModal(modal, config) {
+    /**
+     * Affiche une modale
+     * @param {HTMLElement} modal
+     */
+    showModal(modal) {
         modal.style.display = "block";
+        // Améliorer l'accessibilité
+        modal.setAttribute("aria-hidden", "false");
 
-        // Animation d'entrée
-        if (config.animationDuration > 0) {
-            modal.style.opacity = "0";
-
-            requestAnimationFrame(() => {
-                modal.style.transition = `opacity ${config.animationDuration}ms ease, transform ${config.animationDuration}ms ease`;
-                modal.style.opacity = "1";
-            });
+        // Focus sur le premier élément focusable de la modale
+        const focusableElement = modal.querySelector(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusableElement) {
+            focusableElement.focus();
         }
     }
 
+    /**
+     * Cache une modale
+     * @param {HTMLElement} modal
+     */
     hideModal(modal) {
-        // Animation de sortie
-        if (this.config.animationDuration > 0) {
-            modal.style.opacity = "0";
-
-            setTimeout(() => {
-                modal.style.display = "none";
-                modal.style.transition = "";
-            }, this.config.animationDuration);
-        } else {
-            modal.style.display = "none";
-        }
+        modal.style.display = "none";
+        modal.setAttribute("aria-hidden", "true");
     }
 
-    updateOverlayState() {
-        // Met à jour l'état de l'overlay en fonction des modales ouvertes
-        if (this.openModals.size === 0) {
-            this.hideOverlay();
-            this.enableBodyScroll();
-        }
-    }
-
+    /**
+     * Désactive le scroll du body
+     */
     disableBodyScroll() {
-        if (!this.config.preventBodyScroll) return;
-
         document.body.style.overflow = "hidden";
-        // Compensation de la scrollbar pour éviter le jump
-        document.body.style.paddingRight = `${this.scrollbarWidth}px`;
     }
 
+    /**
+     * Réactive le scroll du body
+     */
     enableBodyScroll() {
         document.body.style.overflow = "";
-        document.body.style.paddingRight = "";
     }
 
-    dispatchModalEvent(eventName, detail) {
-        const event = new CustomEvent(eventName, {
-            detail,
-            bubbles: true,
-            cancelable: true,
-        });
-        document.dispatchEvent(event);
-    }
-
-    // API publique
+    /**
+     * Vérifie si une modale est ouverte
+     * @param {string} id - ID de la modale
+     * @returns {boolean}
+     */
     isModalOpen(id) {
         return this.openModals.has(id);
     }
 
+    /**
+     * Retourne la liste des modales ouvertes
+     * @returns {string[]}
+     */
     getOpenModals() {
-        return Array.from(this.openModals);
+        return [...this.openModals];
     }
 
-    updateConfig(newConfig) {
-        this.config = { ...this.config, ...newConfig };
-    }
-
-    // Nettoyage pour libérer les ressources
+    /**
+     * Nettoie les événements lors de la destruction
+     */
     destroy() {
-        this.removeEventListeners();
-        this.closeAllModals();
-        this.modalCache.clear();
-        this.openModals.clear();
-
-        // Suppression de l'API globale
-        if (window.ModalAPI) {
-            delete window.ModalAPI;
+        if (this.overlay) {
+            this.overlay.removeEventListener("click", this.boundCloseOnOverlay);
         }
+        document.removeEventListener("keydown", this.boundCloseOnEscape);
 
-        this.isInitialized = false;
-    }
+        // Nettoyer les méthodes globales
+        delete window.openModal;
+        delete window.closeModal;
 
-    // Getter pour les statistiques (utile pour le debug)
-    get stats() {
-        return {
-            openModalsCount: this.openModals.size,
-            cachedModalsCount: this.modalCache.size,
-            openModals: this.getOpenModals(),
-        };
+        this.closeAllModals();
+        this.openModals.clear();
+        this.modalCache.clear(); // Vider le cache
     }
 }

@@ -7,7 +7,7 @@
   "publishConfig": {
     "registry": "https://npm.pkg.github.com/"
   },
-  "version": "0.2.7",
+  "version": "0.5.1",
   "description": "Framework JavaScript frontend modulaire pour interfaces web",
   "main": "dist/marssel.cjs.js",
   "module": "dist/marssel.esm.js",

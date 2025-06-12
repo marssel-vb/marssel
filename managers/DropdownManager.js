@@ -38,10 +38,12 @@ export class DropdownManager {
         const dropdownElements = document.querySelectorAll(
             ".dropdown, .dropdown-fullwidth"
         );
+
+        // Si aucun dropdown n'est trouvé, on s'arrête là sans ajouter les styles
         if (dropdownElements.length === 0) return;
 
-        // Add default styles
-        this.dropdownStyles.addBaseStyles();
+        // Add default styles seulement s'il y a des dropdowns
+        this.dropdownStyles.initializeStyles();
 
         // Initialize all dropdowns
         dropdownElements.forEach((dropdown) => {

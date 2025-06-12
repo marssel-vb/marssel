@@ -1,152 +1,195 @@
 export class ToastStyles {
-    constructor(styleManager) {
-        this.styleManager = styleManager;
-        this.positions = {
-            "top-right": { top: "1rem", right: "1rem" },
-            "top-left": { top: "1rem", left: "1rem" },
-            "bottom-right": { bottom: "1rem", right: "1rem" },
-            "bottom-left": { bottom: "1rem", left: "1rem" },
-            "top-center": {
-                top: "1rem",
-                left: "50%",
-                transform: "translateX(-50%)",
-            },
-            "bottom-center": {
-                bottom: "1rem",
-                left: "50%",
-                transform: "translateX(-50%)",
-            },
-        };
+    // Constantes statiques pour éviter la recréation à chaque instance
+    static POSITIONS = Object.freeze({
+        "top-right": { top: "1rem", right: "1rem" },
+        "top-left": { top: "1rem", left: "1rem" },
+        "bottom-right": { bottom: "1rem", right: "1rem" },
+        "bottom-left": { bottom: "1rem", left: "1rem" },
+        "top-center": {
+            top: "1rem",
+            left: "50%",
+            transform: "translateX(-50%)",
+        },
+        "bottom-center": {
+            bottom: "1rem",
+            left: "50%",
+            transform: "translateX(-50%)",
+        },
+    });
 
-        this.types = {
-            success: {
-                bg: "#E8F5E9",
-                color: "#2E7D32",
-                borderLeft: "4px solid #2E7D32",
-            },
-            error: {
-                bg: "#FFEBEE",
-                color: "#C62828",
-                borderLeft: "4px solid #C62828",
-            },
-            warning: {
-                bg: "#FFF8E1",
-                color: "#F57F17",
-                borderLeft: "4px solid #F57F17",
-            },
-            info: {
-                bg: "#E3F2FD",
-                color: "#1565C0",
-                borderLeft: "4px solid #1565C0",
-            },
-        };
+    static TYPES = Object.freeze({
+        success: {
+            bg: "#E8F5E9",
+            color: "#2E7D32",
+            borderLeft: "4px solid #2E7D32",
+        },
+        error: {
+            bg: "#FFEBEE",
+            color: "#C62828",
+            borderLeft: "4px solid #C62828",
+        },
+        warning: {
+            bg: "#FFF8E1",
+            color: "#F57F17",
+            borderLeft: "4px solid #F57F17",
+        },
+        info: {
+            bg: "#E3F2FD",
+            color: "#1565C0",
+            borderLeft: "4px solid #1565C0",
+        },
+    });
+
+    // Styles pré-calculés pour éviter la recréation
+    static CONTAINER_STYLES = new Set([
+        "position: fixed",
+        "z-index: 9999",
+        "pointer-events: none",
+        "width: 100%",
+        "height: 100%",
+        "left: 0",
+        "top: 0",
+    ]);
+
+    static TOAST_BASE_STYLES = new Set([
+        "position: absolute",
+        "min-width: 250px",
+        "max-width: 350px",
+        "background-color: #fff",
+        "color: #333",
+        "border-radius: 4px",
+        "padding: 1rem",
+        "box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15)",
+        "margin-bottom: 0.5rem",
+        "pointer-events: auto",
+        "transition: all 0.3s ease-in-out",
+        "opacity: 0",
+        "transform: translateY(10px)",
+    ]);
+
+    static VISIBLE_STYLES = new Set(["opacity: 1", "transform: translateY(0)"]);
+
+    static MOBILE_STYLES = new Set([
+        "min-width: calc(100% - 2rem)",
+        "max-width: calc(100% - 2rem)",
+        "margin-left: 1rem",
+        "margin-right: 1rem",
+    ]);
+
+    static CLOSE_BUTTON_STYLES = new Set([
+        "position: absolute",
+        "top: 8px",
+        "right: 8px",
+        "background: none",
+        "border: none",
+        "cursor: pointer",
+        "font-size: 16px",
+        "line-height: 1",
+        "color: #999",
+        "padding: 0",
+    ]);
+
+    static PROGRESS_BAR_STYLES = new Set([
+        "position: absolute",
+        "bottom: 0",
+        "left: 0",
+        "height: 3px",
+        "background-color: rgba(0, 0, 0, 0.2)",
+        "width: 100%",
+        "transform-origin: left",
+    ]);
+
+    constructor(styleManager) {
+        if (!styleManager) {
+            throw new Error("StyleManager is required");
+        }
+        this.styleManager = styleManager;
     }
 
+    /**
+     * Applique tous les styles de toast
+     * Utilise une approche batch pour optimiser les performances
+     */
     applyStyles() {
-        this.addContainerStyles();
-        this.addToastBaseStyles();
-        this.addVisibleToastStyles();
-        this.addMobileResponsiveStyles();
-        this.addCloseButtonStyles();
-        this.addToastTypeStyles();
-        this.addProgressBarStyles();
+        // Tableau des méthodes à exécuter dans l'ordre
+        const styleMethods = [
+            () => this.addContainerStyles(),
+            () => this.addToastBaseStyles(),
+            () => this.addVisibleToastStyles(),
+            () => this.addMobileResponsiveStyles(),
+            () => this.addCloseButtonStyles(),
+            () => this.addToastTypeStyles(),
+            () => this.addProgressBarStyles(),
+        ];
 
-        // Apply all collected styles
-        this.styleManager.updateStyles();
+        // Exécution en batch pour de meilleures performances
+        try {
+            styleMethods.forEach((method) => method());
+        } catch (error) {
+            console.error(
+                "Erreur lors de l'application des styles toast:",
+                error
+            );
+            throw error;
+        } finally {
+            // S'assurer que les styles sont toujours appliqués
+            this.styleManager.updateStyles();
+        }
     }
 
     addContainerStyles() {
-        const containerDeclarations = new Set();
-        containerDeclarations.add("position: fixed");
-        containerDeclarations.add("z-index: 9999");
-        containerDeclarations.add("pointer-events: none");
-        containerDeclarations.add("width: 100%");
-        containerDeclarations.add("height: 100%");
-        containerDeclarations.add("left: 0");
-        containerDeclarations.add("top: 0");
-
         this.styleManager.addDeclarationsWithMediaQuery(
             [],
             ".marssel-toast-container",
-            containerDeclarations
+            ToastStyles.CONTAINER_STYLES
         );
     }
 
     addToastBaseStyles() {
-        const toastDeclarations = new Set();
-        toastDeclarations.add("position: absolute");
-        toastDeclarations.add("min-width: 250px");
-        toastDeclarations.add("max-width: 350px");
-        toastDeclarations.add("background-color: #fff");
-        toastDeclarations.add("color: #333");
-        toastDeclarations.add("border-radius: 4px");
-        toastDeclarations.add("padding: 1rem");
-        toastDeclarations.add("box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15)");
-        toastDeclarations.add("margin-bottom: 0.5rem");
-        toastDeclarations.add("pointer-events: auto");
-        toastDeclarations.add("transition: all 0.3s ease-in-out");
-        toastDeclarations.add("opacity: 0");
-        toastDeclarations.add("transform: translateY(10px)");
-
         this.styleManager.addDeclarationsWithMediaQuery(
             [],
             ".marssel-toast",
-            toastDeclarations
+            ToastStyles.TOAST_BASE_STYLES
         );
     }
 
     addVisibleToastStyles() {
-        const visibleDeclarations = new Set();
-        visibleDeclarations.add("opacity: 1");
-        visibleDeclarations.add("transform: translateY(0)");
-
         this.styleManager.addDeclarationsWithMediaQuery(
             [],
             ".marssel-toast.visible",
-            visibleDeclarations
+            ToastStyles.VISIBLE_STYLES
         );
     }
 
     addMobileResponsiveStyles() {
-        const mobileDeclarations = new Set();
-        mobileDeclarations.add("min-width: calc(100% - 2rem)");
-        mobileDeclarations.add("max-width: calc(100% - 2rem)");
-        mobileDeclarations.add("margin-left: 1rem");
-        mobileDeclarations.add("margin-right: 1rem");
-
         this.styleManager.addDeclarationsWithMediaQuery(
             ["msm"], // msm: max-width sm
             ".marssel-toast",
-            mobileDeclarations
+            ToastStyles.MOBILE_STYLES
         );
     }
 
     addCloseButtonStyles() {
-        const closeButtonDeclarations = new Set();
-        closeButtonDeclarations.add("position: absolute");
-        closeButtonDeclarations.add("top: 8px");
-        closeButtonDeclarations.add("right: 8px");
-        closeButtonDeclarations.add("background: none");
-        closeButtonDeclarations.add("border: none");
-        closeButtonDeclarations.add("cursor: pointer");
-        closeButtonDeclarations.add("font-size: 16px");
-        closeButtonDeclarations.add("line-height: 1");
-        closeButtonDeclarations.add("color: #999");
-        closeButtonDeclarations.add("padding: 0");
-
         this.styleManager.addDeclarationsWithMediaQuery(
             [],
             ".marssel-toast-close",
-            closeButtonDeclarations
+            ToastStyles.CLOSE_BUTTON_STYLES
         );
     }
 
+    /**
+     * Génère les styles pour chaque type de toast
+     * Optimisé avec une approche fonctionnelle
+     */
     addToastTypeStyles() {
-        Object.entries(this.types).forEach(([type, style]) => {
-            const typeDeclarations = new Set();
-            typeDeclarations.add(`background-color: ${style.bg}`);
-            typeDeclarations.add(`color: ${style.color}`);
-            typeDeclarations.add(`border-left: ${style.borderLeft}`);
+        const typeEntries = Object.entries(ToastStyles.TYPES);
+
+        typeEntries.forEach(([type, style]) => {
+            const typeDeclarations = new Set([
+                `background-color: ${style.bg}`,
+                `color: ${style.color}`,
+                `border-left: ${style.borderLeft}`,
+            ]);
 
             this.styleManager.addDeclarationsWithMediaQuery(
                 [],
@@ -157,23 +200,68 @@ export class ToastStyles {
     }
 
     addProgressBarStyles() {
-        const progressDeclarations = new Set();
-        progressDeclarations.add("position: absolute");
-        progressDeclarations.add("bottom: 0");
-        progressDeclarations.add("left: 0");
-        progressDeclarations.add("height: 3px");
-        progressDeclarations.add("background-color: rgba(0, 0, 0, 0.2)");
-        progressDeclarations.add("width: 100%");
-        progressDeclarations.add("transform-origin: left");
-
         this.styleManager.addDeclarationsWithMediaQuery(
             [],
             ".marssel-toast-progress",
-            progressDeclarations
+            ToastStyles.PROGRESS_BAR_STYLES
         );
     }
 
-    getPositionStyles(position, defaultPosition) {
-        return this.positions[position] || this.positions[defaultPosition];
+    /**
+     * Récupère les styles de position avec fallback sécurisé
+     * @param {string} position - Position demandée
+     * @param {string} defaultPosition - Position par défaut
+     * @returns {Object} Styles de position
+     */
+    getPositionStyles(position, defaultPosition = "top-right") {
+        const positionStyle = ToastStyles.POSITIONS[position];
+
+        if (positionStyle) {
+            return positionStyle;
+        }
+
+        const fallbackStyle = ToastStyles.POSITIONS[defaultPosition];
+        if (!fallbackStyle) {
+            console.warn(
+                `Position invalide: ${position}, utilisation de top-right par défaut`
+            );
+            return ToastStyles.POSITIONS["top-right"];
+        }
+
+        return fallbackStyle;
+    }
+
+    /**
+     * Méthode utilitaire pour vérifier si une position est valide
+     * @param {string} position - Position à vérifier
+     * @returns {boolean}
+     */
+    static isValidPosition(position) {
+        return position in ToastStyles.POSITIONS;
+    }
+
+    /**
+     * Méthode utilitaire pour vérifier si un type est valide
+     * @param {string} type - Type à vérifier
+     * @returns {boolean}
+     */
+    static isValidType(type) {
+        return type in ToastStyles.TYPES;
+    }
+
+    /**
+     * Récupère la liste des positions disponibles
+     * @returns {string[]}
+     */
+    static getAvailablePositions() {
+        return Object.keys(ToastStyles.POSITIONS);
+    }
+
+    /**
+     * Récupère la liste des types disponibles
+     * @returns {string[]}
+     */
+    static getAvailableTypes() {
+        return Object.keys(ToastStyles.TYPES);
     }
 }

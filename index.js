@@ -9,6 +9,7 @@ import { Marssel } from "./core/Marssel.js";
 // Importation des managers pour permettre un accès direct si nécessaire
 import { FontManager } from "./managers/FontManager.js";
 import { IconManager } from "./managers/IconManager.js";
+import { ThemeManager } from "./managers/ThemeManager.js";
 import { StyleManager } from "./managers/StyleManager.js";
 import { DomManager } from "./managers/DomManager.js";
 import { CarouselManager } from "./managers/CarouselManager.js";
@@ -28,6 +29,7 @@ import {
     containerMaxWidths,
     CLASS_REGEX,
     COLOR_REGEX,
+    defaultThemes,
 } from "./utils/constants.js";
 
 import {
@@ -47,13 +49,24 @@ import {
 
 import { FontsConfig, IconsConfig } from "./utils/config.mjs";
 
-// Export principal de la classe Marssel
-export { Marssel };
+// Importation des styles
+import { CarouselStyles } from "./styles/CarouselStyles.js";
+import { DropdownStyles } from "./styles/DropdownStyles.js";
+import { HeaderStyles } from "./styles/HeaderStyles.js";
+import { OffcanvasStyles } from "./styles/OffcanvasStyles.js";
+import { PopoverStyles } from "./styles/PopoverStyles.js";
+import { ToastStyles } from "./styles/ToastStyles.js";
+import { TooltipStyles } from "./styles/TooltipStyles.js";
 
-// Export des managers individuels
-export {
+// Export par défaut uniquement avec tout regroupé
+export default {
+    // Classe principale
+    Marssel,
+
+    // Managers
     FontManager,
     IconManager,
+    ThemeManager,
     StyleManager,
     DomManager,
     CarouselManager,
@@ -65,16 +78,14 @@ export {
     HeaderManager,
     DropdownManager,
     OffcanvasManager,
-};
 
-// Export des utilitaires
-export {
     // Constants
     properties,
     breakpoints,
     containerMaxWidths,
     CLASS_REGEX,
     COLOR_REGEX,
+    defaultThemes,
 
     // Config
     FontsConfig,
@@ -92,19 +103,13 @@ export {
     parseClassName,
     parseClassPart,
     parseGutterValue,
+
+    // Styles
+    CarouselStyles,
+    DropdownStyles,
+    HeaderStyles,
+    OffcanvasStyles,
+    PopoverStyles,
+    ToastStyles,
+    TooltipStyles,
 };
-
-// Export des styles
-export { CarouselStyles } from "./styles/CarouselStyles.js";
-export { DropdownStyles } from "./styles/DropdownStyles.js";
-export { HeaderStyles } from "./styles/HeaderStyles.js";
-export { OffcanvasStyles } from "./styles/OffcanvasStyles.js";
-export { PopoverStyles } from "./styles/PopoverStyles.js";
-export { ToastStyles } from "./styles/ToastStyles.js";
-export { TooltipStyles } from "./styles/TooltipStyles.js";
-
-/**
- * Export par défaut pour permettre l'import simple:
- * import Marssel from 'marssel';
- */
-export default Marssel;

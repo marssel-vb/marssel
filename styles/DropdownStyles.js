@@ -23,33 +23,29 @@ export class DropdownStyles {
         // Configuration des styles de base
         const styleConfig = {
             // Conteneur principal
-            ".dropdown": [
-                "position: relative",
-                "display: inline-block",
-                "color : lightred",
-            ],
+            ".dropdown": ["position: relative", "display: inline-block"],
 
             // Bouton de déclenchement
             ".dropdown-toggle": [
-                "display: flex",
+                "display: inline-flex",
                 "align-items: center",
+                "justify-content: space-between",
                 "cursor: pointer",
+                "vertical-align: middle",
             ],
 
-            ".dropdown-toggle .icon": [
-                "margin-left: 0.35rem",
-                "transition: transform 0.3s ease",
+            ".dropdown-toggle .icon-plus": [
+                "margin-left: 8px",
+                "transition: all 0.3s ease",
             ],
 
             ".dropdown.active .dropdown-toggle .icon": [
-                "transform: rotate(180deg)",
+                "transform: rotate(180deg) scaleX(-1)", // Combinaison de rotations
             ],
 
             // Menu dropdown standard
             ".dropdown-menu": [
                 "position: absolute",
-                "top: 100%",
-                "left: 0",
                 "z-index: 1000",
                 "display: none",
                 "min-width: 12rem",
@@ -129,6 +125,7 @@ export class DropdownStyles {
     addMegaMenuStyles() {
         const megaMenuConfig = {
             ".mega-menu-grid": [
+                "display: grid",
                 "grid-template-columns: repeat(4, 1fr)",
                 "gap: 1rem",
             ],
@@ -164,18 +161,56 @@ export class DropdownStyles {
 
     addIconStyles() {
         const iconBaseStyles = [
-            "border: solid #333",
-            "border-width: 0 2px 2px 0",
             "display: inline-block",
-            "padding: 3px",
-            "margin-left: 5px",
-            "transition: transform 0.15s ease-in-out",
+            "margin-left: 8px",
+            "transition: transform 0.3s ease",
+            "width: 12px",
+            "height: 12px",
+            "vertical-align: middle",
+            "position: relative",
+            "flex-shrink: 0",
         ];
 
         const iconConfig = {
-            ".icon-down": [...iconBaseStyles, "transform: rotate(45deg)"],
+            // Icône plus (+) par défaut
+            ".icon-plus": [
+                ...iconBaseStyles,
+                "background: transparent",
+                "border: none",
+            ],
 
-            ".icon-right": [...iconBaseStyles, "transform: rotate(-45deg)"],
+            ".icon-plus::before, .icon-plus::after": [
+                "content: ''",
+                "position: absolute",
+                "background-color: #333",
+                "transition: all 0.3s ease",
+            ],
+
+            ".icon-plus::before": [
+                "top: 50%",
+                "left: 0",
+                "width: 100%",
+                "height: 2px",
+                "transform: translateY(-50%)",
+            ],
+
+            ".icon-plus::after": [
+                "left: 50%",
+                "top: 0",
+                "width: 2px",
+                "height: 100%",
+                "transform: translateX(-50%)",
+            ],
+
+            // Transformation en moins (-) quand actif
+            ".dropdown.active .icon-plus::after": [
+                "transform: translateX(-50%) rotate(90deg)",
+                "opacity: 0",
+            ],
+
+            ".dropdown.active .icon-plus::before": [
+                "transform: translateY(-50%)",
+            ],
         };
 
         Object.entries(iconConfig).forEach(([selector, declarations]) => {
@@ -188,7 +223,7 @@ export class DropdownStyles {
         const originalMediaQueries = this.mediaQueries;
 
         // Application des styles mobiles
-        this.mediaQueries = ["(max-width: 768px)"];
+        this.mediaQueries = ["(max-width: 991px)"];
 
         const mobileConfig = {
             ".mobile-view .dropdown-menu": [
@@ -207,6 +242,12 @@ export class DropdownStyles {
                 "border-left: 2px solid rgba(0,0,0,0.1)",
                 "margin-left: 1rem",
                 "padding: 1rem",
+            ],
+
+            ".mobile-view .dropdown-toggle .icon-plus": [
+                "margin-left: 6px",
+                "width: 10px",
+                "height: 10px",
             ],
         };
 

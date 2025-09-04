@@ -1,10 +1,11 @@
 import { PopoverStyles } from "../styles/PopoverStyles.js";
+import { LRUCache } from "../utils/LRUCache.js";
 
 export class PopoverManager {
     constructor(marssel) {
         this.marssel = marssel;
         this.activePopover = null;
-        this.popovers = new Map();
+        this.popovers = new LRUCache(50);
         this.popoverStyles = new PopoverStyles(marssel.styleManager);
 
         // Cache DOM elements

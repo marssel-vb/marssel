@@ -1,48 +1,58 @@
 {
-  "name": "@marssel-vb/marssel",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/marssel-vb/marssel.git"
-  },
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com/"
-  },
-  "version": "0.5.1",
-  "description": "Framework JavaScript frontend modulaire pour interfaces web",
-  "main": "dist/marssel.cjs.js",
-  "module": "dist/marssel.esm.js",
-  "browser": "dist/marssel.umd.js",
-  "types": "types/index.d.ts",
-  "scripts": {
-    "build": "rollup -c rollup.config.js",
-    "dev": "rollup -c rollup.config.js -w",
-    "prepublishOnly": "npm run build"
-  },
-  "keywords": [
-    "marssel",
-    "carousel",
-    "modal",
-    "tooltip",
-    "javascript",
-    "ui"
-  ],
-  "author": "Valentin Banse",
-  "license": "MIT",
-  "files": [
-    "core/",
-    "generators/",
-    "managers/",
-    "styles/",
-    "utils/",
-    "index.js",
-    "dist/",
-    "README.md",
-    "LICENSE"
-  ],
-  "devDependencies": {
-    "@rollup/plugin-commonjs": "^28.0.3",
-    "@rollup/plugin-node-resolve": "^16.0.1",
-    "@rollup/plugin-terser": "^0.4.4",
-    "rollup": "^4.40.0"
-  }
+    "name": "@marssel-vb/marssel",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/marssel-vb/marssel.git"
+    },
+    "publishConfig": {
+        "registry": "https://npm.pkg.github.com/"
+    },
+    "version": "0.9.6",
+    "description": "Framework CSS-in-JS moderne générant du style instantané sans configuration. Zéro build step, classes intuitives basées sur les propriétés CSS standard, incluant des composants JS.",
+    "main": "dist/marssel.cjs.js",
+    "module": "dist/marssel.esm.js",
+    "browser": "dist/marssel.umd.js",
+    "types": "types/index.d.ts",
+    "scripts": {
+        "build": "rollup -c rollup.config.js",
+        "dev": "rollup -c rollup.config.js -w",
+        "prepublishOnly": "npm run build"
+    },
+    "keywords": [
+        "marssel",
+        "css-in-js",
+        "css",
+        "framework",
+        "zero-config",
+        "style-instantane",
+        "ui",
+        "javascript",
+        "carousel",
+        "modal",
+        "tooltip",
+        "toast",
+        "dropdown",
+        "popover",
+        "offcanvas"
+    ],
+    "author": "Valentin Banse",
+    "license": "MIT",
+    "files": [
+        "core/",
+        "generators/",
+        "managers/",
+        "styles/",
+        "utils/",
+        "index.js",
+        "dist/",
+        "README.md",
+        "CHANGELOG.md",
+        "LICENSE"
+    ],
+    "devDependencies": {
+        "@rollup/plugin-commonjs": "^28.0.3",
+        "@rollup/plugin-node-resolve": "^16.0.1",
+        "@rollup/plugin-terser": "^0.4.4",
+        "rollup": "^4.40.0"
+    }
 }

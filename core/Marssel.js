@@ -8,13 +8,22 @@ import {
     containerMaxWidths,
     CLASS_REGEX,
     COLOR_REGEX,
+    CRITICAL_SELECTORS,
     defaultThemes, // Importer la fonction d'extension
 } from "../utils/constants.js";
 
+import { parseClassName } from "../utils/parsed.js";
+
 export class Marssel {
-    constructor({ lazyload = false, theme = "auto", themes = {} } = {}) {
+    constructor({
+        lazyload = false,
+        theme = "auto",
+        themes = {},
+        components = {},
+    } = {}) {
         this.config = { lazyload, theme };
         this.allThemes = this.mergeThemes(defaultThemes || {}, themes);
+        this.componentStyles = components;
 
         // List of managers to instantiate
         const managerList = [
@@ -31,6 +40,8 @@ export class Marssel {
             "DropdownManager",
             "OffcanvasManager",
             "PopoverManager",
+            "TabsManager",
+            "AnimationManager",
         ];
 
         // Instantiating managers dynamically
@@ -81,44 +92,248 @@ export class Marssel {
     }
 
     async init() {
-        if (!this.allThemes || Object.keys(this.allThemes).length === 0) {
-            console.error("Aucun thème disponible pour l'initialisation");
-            // Créer des thèmes par défaut minimaux
-            this.allThemes = {
-                light: {},
-                dark: {},
-            };
-            this.themeManager.themes = this.allThemes;
+        try {
+            if (!this.allThemes || Object.keys(this.allThemes).length === 0) {
+                console.error("Aucun thème disponible pour l'initialisation");
+                // Créer des thèmes par défaut minimaux
+                this.allThemes = {
+                    light: {},
+                    dark: {},
+                };
+                this.themeManager.themes = this.allThemes;
+            }
+
+            // Initialise les styles critiques IMMÉDIATEMENT
+            this.styleManager.initializeStyleSheet();
+
+            // Optimisation: Ne pas attendre DOMContentLoaded si déjà chargé
+            if (document.readyState !== "loading") {
+                await Promise.all([
+                    this.fontManager.init(),
+                    this.iconManager.init(),
+                ]);
+            } else {
+                await new Promise((resolve) => {
+                    document.addEventListener("DOMContentLoaded", async () => {
+                        await Promise.all([
+                            this.fontManager.init(),
+                            this.iconManager.init(),
+                        ]);
+                        resolve();
+                    });
+                });
+            }
+
+            // Charge les polices et icônes en parallèle
+            await Promise.all([
+                this.fontManager.init(),
+                this.iconManager.init(),
+            ]);
+
+            this.themeManager.init(this.config.theme);
+
+            // Styles par défaut
+            this.styleManager.addDefaultStyles();
+
+            this.preprocessAllCompactClasses();
+
+            // NOUVEAU : Traite spécifiquement les éléments critiques en premier
+            await this.processCriticalElementsFirst();
+
+            // Traite d'abord les éléments visibles
+            this.domManager.processVisibleElementsFirst();
+            this.domManager.setupObservers();
+
+            // Managers to be initialized
+            const managersToInit = [
+                "carouselManager",
+                "modalManager",
+                "popoverManager",
+                "scrollspyManager",
+                "toastManager",
+                "tooltipManager",
+                "headerManager",
+                "dropdownManager",
+                "offcanvasManager",
+                "tabsManager",
+                "animationManager",
+            ];
+
+            this.registerComponentStyles();
+
+            // Initialisation différée des managers non critiques
+            setTimeout(() => {
+                managersToInit.forEach((manager) => {
+                    try {
+                        this[manager]?.init?.();
+                    } catch (error) {
+                        console.warn(
+                            `Erreur initialisation ${manager}:`,
+                            error
+                        );
+                    }
+                });
+
+                this.domManager.processAllElements();
+
+                // Marquer comme prêt immédiatement après le traitement
+                requestAnimationFrame(() => {
+                    document.body.classList.add("marssel-ready");
+                    console.log("🎨 Marssel initialisé avec succès");
+                });
+            }, 50); // Réduit de 100ms à 50ms
+        } catch (error) {
+            console.error("⚠ Erreur initialisation Marssel:", error);
+        }
+    }
+
+    preprocessAllCompactClasses() {
+        // Scanner tout le document pour les classes avec ---
+        const allElements = document.querySelectorAll("*");
+        const compactClasses = new Set();
+
+        allElements.forEach((element) => {
+            element.classList.forEach((className) => {
+                if (className.includes("---")) {
+                    compactClasses.add(className);
+                }
+            });
+        });
+
+        // Traiter immédiatement toutes ces classes
+        compactClasses.forEach((className) => {
+            this.domManager.processClassOptimized(className);
+        });
+
+        // Forcer la mise à jour des styles
+        this.domManager.processPendingClasses();
+        this.styleManager.updateStyles();
+
+        console.log(`🎨 ${compactClasses.size} classes compactes prétraitées`);
+    }
+
+    async processCriticalElementsFirst() {
+        return new Promise((resolve) => {
+            const criticalSelectors = [
+                "header",
+                "footer",
+                "nav",
+                '[role="banner"]',
+                '[role="contentinfo"]',
+                '[role="navigation"]',
+                ".header",
+                ".footer",
+                ".navbar",
+                ".nav",
+            ];
+
+            const criticalElements = [];
+            const viewportHeight = window.innerHeight;
+
+            criticalSelectors.forEach((selector) => {
+                try {
+                    const elements = document.querySelectorAll(selector);
+                    elements.forEach((element) => {
+                        const rect = element.getBoundingClientRect();
+                        // Prendre une marge plus large pour les éléments critiques
+                        if (
+                            rect.top < viewportHeight + 100 &&
+                            rect.bottom > -100
+                        ) {
+                            criticalElements.push(element);
+                        }
+                    });
+                } catch (e) {
+                    // Ignorer les erreurs de sélecteur
+                }
+            });
+
+            if (criticalElements.length === 0) {
+                resolve();
+                return;
+            }
+
+            // Traiter immédiatement les éléments critiques
+            let processed = 0;
+            const total = criticalElements.length;
+
+            criticalElements.forEach((element) => {
+                this.domManager.processElement(element);
+                processed++;
+
+                if (processed === total) {
+                    // Traiter immédiatement les styles des éléments critiques
+                    this.domManager.processPendingClasses();
+                    this.styleManager.updateStyles();
+
+                    // Laisser un frame pour que les styles s'appliquent
+                    requestAnimationFrame(() => {
+                        resolve();
+                    });
+                }
+            });
+        });
+    }
+
+    registerComponentStyles() {
+        if (
+            !this.componentStyles ||
+            Object.keys(this.componentStyles).length === 0
+        ) {
+            return;
         }
 
-        // Asynchronous initialization
-        await this.fontManager.init();
-        await this.iconManager.init();
+        Object.entries(this.componentStyles).forEach(([selector, styles]) => {
+            const styleString = Array.isArray(styles)
+                ? styles.join(" ")
+                : styles;
 
-        this.themeManager.init(this.config.theme);
+            // Créer une classe virtuelle qui sera traitée par le système existant
+            const virtualElement = document.createElement("div");
+            virtualElement.className = styleString;
 
-        // Synchronous initialization
-        this.styleManager.initializeStyleSheet();
-        this.styleManager.addDefaultStyles();
-        this.domManager.setupObservers();
-        this.domManager.processAllElements();
+            // Parser et enregistrer les styles
+            const classList = virtualElement.classList;
+            Array.from(classList).forEach((className) => {
+                this.domManager.processClassOptimized(className);
+            });
 
-        // Managers to be initialized
-        const managersToInit = [
-            "carouselManager",
-            "modalManager",
-            "popoverManager",
-            "scrollspyManager",
-            "toastManager",
-            "tooltipManager",
-            "headerManager",
-            "dropdownManager",
-            "offcanvasManager",
-        ];
+            // Mapper le sélecteur personnalisé
+            this.mapComponentSelector(selector, styleString);
+        });
 
-        for (const manager of managersToInit) {
-            this[manager]?.init?.();
-        }
+        this.styleManager.updateStyles();
+    }
+
+    mapComponentSelector(selector, styles) {
+        // Extraire le nom de base et le pseudo-sélecteur
+        const [baseSelector, pseudoSelector] = selector.split(":");
+
+        // Créer le sélecteur CSS final
+        const cssSelector = pseudoSelector
+            ? `.${baseSelector}:${pseudoSelector}`
+            : `.${baseSelector}`;
+
+        // Ajouter au StyleManager
+        const declarations = new Set();
+        const classList = styles.split(" ");
+
+        classList.forEach((className) => {
+            const parsed = parseClassName(className);
+            if (parsed) {
+                const genDeclarations = this.styleManager.generateDeclarations(
+                    parsed,
+                    cssSelector
+                );
+                genDeclarations.forEach((decl) => declarations.add(decl));
+            }
+        });
+
+        this.styleManager.addDeclarationsWithMediaQuery(
+            [],
+            cssSelector,
+            declarations
+        );
     }
 
     // Exposition of constants
@@ -139,5 +354,8 @@ export class Marssel {
     }
     static get COLOR_REGEX() {
         return COLOR_REGEX;
+    }
+    static get CRITICAL_SELECTORS() {
+        return CRITICAL_SELECTORS;
     }
 }

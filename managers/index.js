@@ -12,3 +12,5 @@ export { CarouselManager } from "./CarouselManager.js";
 export { DropdownManager } from "./DropdownManager.js";
 export { OffcanvasManager } from "./OffcanvasManager.js";
 export { PopoverManager } from "./PopoverManager.js";
+export { TabsManager } from "./TabsManager.js";
+export { AnimationManager } from "./AnimationManager.js";

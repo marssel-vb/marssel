@@ -1,9 +1,10 @@
 import { OffcanvasStyles } from "../styles/OffcanvasStyles.js";
+import { LRUCache } from "../utils/LRUCache.js";
 
 export class OffcanvasManager {
     constructor(marssel) {
         this.marssel = marssel;
-        this.offcanvasElements = new Map();
+        this.offcanvasElements = new LRUCache(20);
         this.activeOffcanvas = null;
         this.backdrop = null;
         this.isInitialized = false;
@@ -20,7 +21,7 @@ export class OffcanvasManager {
         // Vérifie s'il y a au moins un trigger avec une requête plus efficace
         if (!document.querySelector("[data-offcanvas-target]")) return;
 
-        this.offcanvasStyles.addBaseStyles();
+        this.offcanvasStyles.initializeStyles();
         this.createBackdrop();
         this.initEvents();
 

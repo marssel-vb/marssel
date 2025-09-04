@@ -170,8 +170,7 @@ export class HeaderStyles {
         this.addOptimizedStyles(
             this.selectors.actions,
             this.commonDeclarations.flex.display,
-            this.commonDeclarations.flex.alignCenter,
-            new Set(["margin-left: auto"])
+            this.commonDeclarations.flex.alignCenter
         );
 
         // Liste de navigation
@@ -199,12 +198,6 @@ export class HeaderStyles {
             this.selectors.navLink,
             this.commonDeclarations.display.block,
             navLinkStyles
-        );
-
-        // Hover des liens
-        this.addOptimizedStyles(
-            `${this.selectors.navLink}:hover`,
-            new Set(["color: #4a90e2"])
         );
     }
 
@@ -254,6 +247,11 @@ export class HeaderStyles {
             new Set(["top: 0", "bottom: 0"]),
             mobileMenuConfigs.sidebar.baseStyles,
             this.commonDeclarations.transitions.all
+        );
+
+        this.addOptimizedStyles(
+            ".mobile-menu.sidebar .menu-close",
+            new Set(["float: right", "padding: 1rem"])
         );
 
         // Sidebars gauche et droite
@@ -349,18 +347,11 @@ export class HeaderStyles {
         );
 
         // Bouton toggle mobile
-        const toggleStyles = new Set([
-            "padding: 0.5rem",
-            "width: 30px",
-            "height: 30px",
-            "margin-left: 1rem",
-        ]);
         this.addOptimizedStyles(
             this.selectors.menuToggle,
             this.commonDeclarations.display.none,
             this.commonDeclarations.position.relative,
-            this.commonDeclarations.button.base,
-            toggleStyles
+            this.commonDeclarations.button.base
         );
 
         // Barres du bouton toggle
@@ -369,14 +360,8 @@ export class HeaderStyles {
         // Bouton fermer
         this.addOptimizedStyles(
             this.selectors.menuClose,
-            this.commonDeclarations.position.absolute,
             this.commonDeclarations.button.base,
-            new Set([
-                "top: 1rem",
-                "right: 1rem",
-                "font-size: 1.5rem",
-                "z-index: 1060",
-            ])
+            new Set(["font-size: 1.5rem", "z-index: 1060"])
         );
 
         // Gestion des boutons mobiles
@@ -424,16 +409,13 @@ export class HeaderStyles {
         // Container des boutons mobiles
         this.addOptimizedStyles(
             ".mobile-buttons-container",
-            this.commonDeclarations.position.relative,
-            new Set(["width: 30px", "height: 30px", "margin-left: 1rem"])
+            this.commonDeclarations.position.relative
         );
 
         // Masquer/afficher les boutons selon l'état du menu
         this.addOptimizedStyles(
             ".mobile-buttons-container .menu-close",
-            this.commonDeclarations.display.none,
-            this.commonDeclarations.position.absolute,
-            new Set(["top: 0", "left: 0"])
+            this.commonDeclarations.display.none
         );
 
         this.addOptimizedStyles(

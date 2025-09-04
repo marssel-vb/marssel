@@ -1,9 +1,11 @@
+import { LRUCache } from "../utils/LRUCache.js";
+
 export class ModalManager {
     constructor(marssel) {
         this.marssel = marssel;
         this.overlay = null;
         this.openModals = new Set(); // Suivi des modales ouvertes
-        this.modalCache = new Map(); // Cache des éléments pour éviter les querySelector répétés
+        this.modalCache = new LRUCache(50); // Cache des éléments pour éviter les querySelector répétés
         this.boundCloseOnOverlay = this.closeAllModals.bind(this);
         this.boundCloseOnEscape = this.handleEscapeKey.bind(this);
     }

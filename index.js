@@ -21,6 +21,8 @@ import { TooltipManager } from "./managers/TooltipManager.js";
 import { HeaderManager } from "./managers/HeaderManager.js";
 import { DropdownManager } from "./managers/DropdownManager.js";
 import { OffcanvasManager } from "./managers/OffcanvasManager.js";
+import { TabsManager } from "./managers/TabsManager.js";
+import { AnimationManager } from "./managers/AnimationManager.js";
 
 // Importation des utilitaires
 import {
@@ -29,6 +31,7 @@ import {
     containerMaxWidths,
     CLASS_REGEX,
     COLOR_REGEX,
+    CRITICAL_SELECTORS,
     defaultThemes,
 } from "./utils/constants.js";
 
@@ -57,6 +60,8 @@ import { OffcanvasStyles } from "./styles/OffcanvasStyles.js";
 import { PopoverStyles } from "./styles/PopoverStyles.js";
 import { ToastStyles } from "./styles/ToastStyles.js";
 import { TooltipStyles } from "./styles/TooltipStyles.js";
+import { TabsStyles } from "./styles/TabsStyles.js";
+import { AnimationStyles } from "./styles/AnimationStyles.js";
 
 // Export par défaut uniquement avec tout regroupé
 export default {
@@ -78,6 +83,8 @@ export default {
     HeaderManager,
     DropdownManager,
     OffcanvasManager,
+    TabsManager,
+    AnimationManager,
 
     // Constants
     properties,
@@ -85,6 +92,7 @@ export default {
     containerMaxWidths,
     CLASS_REGEX,
     COLOR_REGEX,
+    CRITICAL_SELECTORS,
     defaultThemes,
 
     // Config
@@ -112,4 +120,6 @@ export default {
     PopoverStyles,
     ToastStyles,
     TooltipStyles,
+    TabsStyles,
+    AnimationStyles,
 };

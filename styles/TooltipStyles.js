@@ -161,7 +161,7 @@ export class TooltipStyles {
     /**
      * Add all tooltip-related styles to the document
      */
-    addBaseStyles() {
+    initializeStyles() {
         // Add base styles in batch
         this.addBaseStyleRules();
         this.addPositioningStyles();

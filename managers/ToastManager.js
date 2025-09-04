@@ -1,12 +1,14 @@
 import { ToastStyles } from "../styles/ToastStyles.js";
+import { LRUCache } from "../utils/LRUCache.js";
 
 export class ToastManager {
     constructor(marssel) {
         this.marssel = marssel;
         this.container = null;
-        this.toasts = new Map();
+        this.toasts = new LRUCache(20);
         this.counter = 0;
         this.toastStyle = new ToastStyles(marssel.styleManager);
+        this.stylesApplied = false;
 
         // Configuration par défaut
         this.config = {
@@ -20,11 +22,8 @@ export class ToastManager {
     }
 
     init() {
-        // Vérification optimisée avec querySelector plus spécifique
-        if (!document.querySelector("[data-popover-trigger]")) return;
-
         this.createContainer();
-        this.toastStyle.applyStyles();
+        //this.toastStyle.applyStyles();
         this.bindGlobalMethods();
     }
 
@@ -56,6 +55,11 @@ export class ToastManager {
     }
 
     show(message, options = {}) {
+        if (!this.stylesApplied) {
+            this.toastStyle.applyStyles();
+            this.stylesApplied = true;
+        }
+
         const id = `toast-${++this.counter}`;
         const config = this.mergeOptions(options);
 

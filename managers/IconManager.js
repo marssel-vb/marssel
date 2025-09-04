@@ -1,3 +1,5 @@
+import { LRUCache } from "../utils/LRUCache.js";
+
 export class IconManager {
     constructor(marssel) {
         this.marssel = marssel;
@@ -13,7 +15,7 @@ export class IconManager {
         this.iconRegex = /^icon-\\\[([a-z0-9-]+(?:-solid|-duotone)?)\\\]$/i;
         this.colorRegex = /c-\[([\da-f]{3,8})\]/i;
 
-        this.styleCache = new Map();
+        this.styleCache = new LRUCache(200);
 
         this.ICON_TYPES = Object.freeze({
             OUTLINE: "outline",

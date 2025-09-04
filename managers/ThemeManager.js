@@ -1,3 +1,5 @@
+import { LRUCache } from "../utils/LRUCache.js";
+
 export class ThemeManager {
     constructor(marssel, themes) {
         this.marssel = marssel;
@@ -5,7 +7,7 @@ export class ThemeManager {
 
         this.currentTheme = "light";
         this.themeChangeCallbacks = new Set();
-        this.themeIcons = new Map();
+        this.themeIcons = new LRUCache(50);
         this.customThemeValues = { light: {}, dark: {} };
 
         // Cache des éléments DOM

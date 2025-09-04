@@ -1,10 +1,11 @@
 import { CarouselStyles } from "../styles/CarouselStyles.js";
+import { LRUCache } from "../utils/LRUCache.js";
 
 export class CarouselManager {
     constructor(marssel) {
         this.marssel = marssel;
         this.carouselStyles = new CarouselStyles(marssel.styleManager);
-        this.carousels = new Map();
+        this.carousels = new LRUCache(30);
         this.activeCarousel = null;
         this.touchStartX = 0;
     }

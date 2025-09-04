@@ -1,34 +1,17 @@
 // Importation des constantes
 import { breakpoints } from "./constants.js";
+import { LRUCache } from "./LRUCache.js";
 
 // Cache pour les regex compilées - améliore les performances
 const REGEX_CACHE = Object.freeze({
-    // Fonctions CSS (rgba, translateX, etc.)
     CSS_FUNCTIONS: /(\w+)\[([^\]]+)\]/g,
-
-    // Couleurs rgb/rgba spécifiques
-    RGB_RGBA: /(rgb|rgba)\[([^\]]+)\]/g,
-
-    // Conversions générales
-    DECIMAL_DOT: /(\d)d(\d)/g,
-    PERCENT: /pc/g,
     BRACKETS_OPEN: /\[/g,
     BRACKETS_CLOSE: /\]/g,
-    DOUBLE_UNDERSCORE: /__/g,
-    SINGLE_UNDERSCORE: /_/g,
-    COMMA_SPACE: /, /g,
-
-    // Couleurs hexadécimales (regex optimisée)
-    HEX_COLOR:
-        /(?<!#)(?<!rgba?\[|rgb\()[A-Fa-f0-9]{6}|([A-Fa-f0-9])\1\1(?=[^a-zA-Z0-9#]|$)(?!\])(?!(,\s*\d))/g,
-
-    // Échappement
     ESCAPE_BRACKETS: /[\[\]]/g,
-    SPACES: / /g,
 });
 
 // Cache pour les conversions de breakpoints
-const breakpointCache = new Map();
+const breakpointCache = new LRUCache(100);
 
 // Set pour les breakpoints valides (performance O(1) pour has)
 const validBreakpoints = new Set(Object.keys(breakpoints));
@@ -43,60 +26,34 @@ export const cleanValue = (value) => {
         return "";
     }
 
-    // Étape 1 : Traitement des fonctions CSS générales
-    let cleaned = value.replace(
-        REGEX_CACHE.CSS_FUNCTIONS,
-        (match, fn, params) => {
-            const processedParams = params
-                .replace(REGEX_CACHE.SINGLE_UNDERSCORE, ", ")
-                .replace(REGEX_CACHE.DECIMAL_DOT, "$1.$2")
-                .replace(REGEX_CACHE.PERCENT, "%");
+    // Convertir underscores en espaces D'ABORD
+    let cleaned = value.replace(/_/g, " ");
 
-            return `${fn}(${processedParams})`;
-        }
-    );
+    // Ajout du # pour hex AVANT la transformation des thèmes
+    cleaned = addHashToHex(cleaned);
 
-    // Étape 2 : Traitement spécialisé des couleurs rgb/rgba
-    cleaned = cleaned.replace(REGEX_CACHE.RGB_RGBA, (match, type, params) => {
-        const values = params.split("_").map((val) => val.trim());
+    // Transformer les thèmes EN DERNIER (après addHashToHex)
+    if (cleaned.includes("theme-") && !cleaned.includes("var(--theme-")) {
+        cleaned = cleaned.replace(
+            /\btheme-([a-zA-Z0-9-]+)\b/g,
+            "var(--theme-$1)"
+        );
+    }
 
-        if (type === "rgb" && values.length >= 3) {
-            return `rgb(${values.slice(0, 3).join(", ")})`;
-        }
+    return cleaned;
+};
 
-        if (type === "rgba" && values.length >= 4) {
-            const alpha = parseFloat(values[3]);
-            const normalizedAlpha = alpha > 1 ? alpha / 100 : alpha;
-            return `rgba(${values.slice(0, 3).join(", ")}, ${normalizedAlpha})`;
-        }
-
-        return match;
-    });
-
-    // Étape 3 : Conversions générales (optimisées avec regex pré-compilées)
-    cleaned = cleaned
-        .replace(REGEX_CACHE.DECIMAL_DOT, "$1.$2")
-        .replace(REGEX_CACHE.PERCENT, "%")
-        .replace(REGEX_CACHE.BRACKETS_OPEN, "(")
-        .replace(REGEX_CACHE.BRACKETS_CLOSE, ")")
-        .replace(REGEX_CACHE.DOUBLE_UNDERSCORE, ",")
-        .replace(REGEX_CACHE.SINGLE_UNDERSCORE, " ")
-        .replace(REGEX_CACHE.COMMA_SPACE, ",");
-
-    // Étape 4 : Finalisation des fonctions de couleur
-    cleaned = cleaned.replace(
-        /(rgba?|hsla?)\(([^)]+)\)/g,
-        (match, fn, params) => {
-            return `${fn}(${params.replace(/ /g, ",")})`;
-        }
-    );
-
-    // Étape 5 : Ajout automatique du # pour les couleurs hexadécimales
-    return addHashToHex(cleaned);
+export const cleanValueFast = (value) => {
+    // Pour les valeurs simples (80% des cas), éviter toutes les regex
+    if (!value.includes("[") && !value.includes("_") && !value.includes("d")) {
+        return value.replace(/pc/g, "%");
+    }
+    // Sinon fallback sur la version complète
+    return cleanValue(value);
 };
 
 /**
- * Ajoute le symbole # aux couleurs hexadécimales (nom plus descriptif)
+ * Ajoute le symbole # aux couleurs hexadécimales
  * @param {string} value - La valeur contenant potentiellement des couleurs hexa
  * @returns {string} - La valeur avec les # ajoutés
  */
@@ -105,16 +62,148 @@ export const addHashToHex = (value) => {
         return "";
     }
 
-    return value.replace(
-        REGEX_CACHE.HEX_COLOR,
-        (match) => `#${match.toUpperCase()}`
-    );
+    // Ne pas traiter si contient rgb/rgba
+    if (/rgba?\(/.test(value)) {
+        return value;
+    }
+
+    // Split par espaces et virgules, en gardant les séparateurs
+    const parts = value.split(/(\s+|,)/);
+
+    return parts
+        .map((part) => {
+            // Ne rien faire avec les séparateurs
+            if (/^\s*$|^,$/.test(part)) {
+                return part;
+            }
+
+            const trimmed = part.trim();
+
+            // CRITIQUE : Ne PAS convertir si contient une unité CSS
+            if (
+                /(\d+\.?\d*)(deg|turn|rad|grad|px|em|rem|%|vh|vw|vmin|vmax|ch|ex|ms|s)$/i.test(
+                    trimmed
+                )
+            ) {
+                return part;
+            }
+
+            // Ne PAS convertir les nombres purs
+            if (/^\d+\.?\d*$/.test(trimmed)) {
+                return part;
+            }
+
+            // Tester si c'est un hex valide (3 ou 6 caractères)
+            const hexMatch = trimmed.match(/^([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/);
+            if (hexMatch) {
+                const hex = hexMatch[1];
+                const hasLetters = /[A-Fa-f]/i.test(hex);
+                const threeIdentical =
+                    hex.length === 3 &&
+                    hex[0].toLowerCase() === hex[1].toLowerCase() &&
+                    hex[1].toLowerCase() === hex[2].toLowerCase();
+                const isSixChars = hex.length === 6;
+
+                if (hasLetters || threeIdentical || isSixChars) {
+                    return part.replace(hex, `#${hex.toUpperCase()}`);
+                }
+            }
+
+            return part;
+        })
+        .join("");
 };
 
 /**
- * Échappe une valeur pour l'utilisation dans les sélecteurs CSS
- * @param {string} value - La valeur à échapper
- * @returns {string} - La valeur échappée
+ * Traite les couleurs hexadécimales et les thèmes dans les valeurs de gradient
+ * @param {string} value - La valeur du gradient
+ * @returns {string} - La valeur CSS finale
+ */
+export const processGradientColors = (value) => {
+    if (!value || typeof value !== "string") {
+        return "";
+    }
+
+    // 1. Normaliser les espaces (convertir _ en espace)
+    const valueWithSpaces = value.replace(/_/g, " ");
+
+    // 2. Protéger les fonctions existantes (rgb, var, calc, etc.)
+    const functions = [];
+    let protectedValue = valueWithSpaces.replace(
+        /(rgba?|hsla?|var|calc|min|max|clamp)\([^)]+\)/gi,
+        (match) => {
+            const placeholder = `__FUNC_${functions.length}__`;
+            functions.push(match);
+            return placeholder;
+        }
+    );
+
+    // 3. CORRECTIF : Transformer les thèmes (theme-xxx -> var(--theme-xxx))
+    // On le fait sur la partie non protégée
+    protectedValue = protectedValue.replace(
+        /\btheme-([a-zA-Z0-9-]+)\b/g,
+        "var(--theme-$1)"
+    );
+
+    // 4. Traitement des couleurs Hexadécimales
+    const parts = protectedValue.split(/([,\s]+)/);
+
+    const processedParts = parts.map((part) => {
+        const trimmed = part.trim();
+
+        // Ignorer séparateurs et placeholders
+        if (
+            !trimmed ||
+            /^[,\s]+$/.test(part) ||
+            /^__FUNC_\d+__$/.test(trimmed)
+        ) {
+            return part;
+        }
+
+        // Ignorer unités CSS, "transparent" et nombres purs
+        if (
+            /(\d+\.?\d*)(deg|turn|rad|grad|px|em|rem|%|vh|vw|vmin|vmax)$/i.test(
+                trimmed
+            ) ||
+            trimmed === "transparent" ||
+            /^\d+\.?\d*$/.test(trimmed)
+        ) {
+            return part;
+        }
+
+        // Convertir Hexadécimal
+        const hexMatch = trimmed.match(/^([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/);
+        if (hexMatch && !trimmed.startsWith("#")) {
+            const hex = hexMatch[1];
+            if (hex.length === 6) {
+                return `#${hex.toUpperCase()}`;
+            }
+            if (hex.length === 3) {
+                const hasLetters = /[A-Fa-f]/i.test(hex);
+                const threeIdentical =
+                    hex[0].toLowerCase() === hex[1].toLowerCase() &&
+                    hex[1].toLowerCase() === hex[2].toLowerCase();
+                if (hasLetters || threeIdentical) {
+                    return `#${hex.toUpperCase()}`;
+                }
+            }
+        }
+
+        return part;
+    });
+
+    let result = processedParts.join("");
+
+    // 5. Restaurer les fonctions CSS protégées
+    functions.forEach((func, index) => {
+        result = result.replace(`__FUNC_${index}__`, func);
+    });
+
+    return result;
+};
+
+/**
+ * Echappe une valeur pour l'utilisation dans les sélecteurs CSS
  */
 export const escapeValue = (value) => {
     if (!value || typeof value !== "string") {
@@ -122,22 +211,27 @@ export const escapeValue = (value) => {
     }
 
     return value
-        .replace(REGEX_CACHE.ESCAPE_BRACKETS, "\\$&") // Échappe [ et ]
-        .replace(REGEX_CACHE.SPACES, "_"); // Remplace les espaces par _
+        .replace(/\[/g, "\\[")
+        .replace(/\]/g, "\\]")
+        .replace(/\+/g, "\\+")
+        .replace(/:/g, "\\:")
+        .replace(/\(/g, "\\(")
+        .replace(/\)/g, "\\)")
+        .replace(/%/g, "\\%")
+        .replace(/,/g, "\\,")
+        .replace(/\./g, "\\.")
+        .replace(/\//g, "\\/")
+        .replace(/_/g, "\\_");
 };
 
 /**
- * Construit une media query à partir d'une liste de breakpoints avec cache et optimisations
- * @param {string[]} breakpointList - Liste des breakpoints
- * @returns {string|null} - La media query construite ou null
+ * Construit une media query à partir d'une liste de breakpoints
  */
 export const buildMediaQuery = (breakpointList) => {
-    // Validation rapide
     if (!Array.isArray(breakpointList) || breakpointList.length === 0) {
         return null;
     }
 
-    // Clé de cache pour éviter les recalculs
     const cacheKey = breakpointList.join("|");
     if (breakpointCache.has(cacheKey)) {
         return breakpointCache.get(cacheKey);
@@ -145,7 +239,6 @@ export const buildMediaQuery = (breakpointList) => {
 
     let result = null;
 
-    // Cas spécial : range min-max (2 breakpoints)
     if (breakpointList.length === 2) {
         const [min, max] = breakpointList;
         const minWidth = breakpoints[min];
@@ -155,7 +248,6 @@ export const buildMediaQuery = (breakpointList) => {
             result = `(min-width: ${minWidth}) and (max-width: ${maxWidth})`;
         }
     } else {
-        // Filtrage optimisé avec Set.has() O(1)
         const validBps = breakpointList.filter((bp) => {
             const key =
                 bp.startsWith("m") && bp.length === 3 ? bp.slice(1) : bp;
@@ -175,24 +267,17 @@ export const buildMediaQuery = (breakpointList) => {
         }
     }
 
-    // Mise en cache du résultat
-    breakpointCache.set(cacheKey, result);
-
-    // Auto-nettoyage du cache si nécessaire
-    if (breakpointCache.size > 100) {
-        const entries = Array.from(breakpointCache.entries()).slice(-50);
-        breakpointCache.clear();
-        entries.forEach(([key, value]) => breakpointCache.set(key, value));
+    if (breakpointCache.size >= 100) {
+        const firstKey = breakpointCache.keys().next().value;
+        breakpointCache.delete(firstKey);
     }
 
+    breakpointCache.set(cacheKey, result);
     return result;
 };
 
 /**
- * Construit une déclaration CSS à partir d'une propriété et d'une valeur
- * @param {string|string[]} property - La propriété CSS (ou tableau de propriétés)
- * @param {string} value - La valeur CSS
- * @returns {string} - La déclaration CSS construite
+ * Construit une déclaration CSS
  */
 export const buildDeclaration = (property, value) => {
     if (!property || !value) {
@@ -208,37 +293,21 @@ export const buildDeclaration = (property, value) => {
  * Utilitaires supplémentaires pour l'optimisation
  */
 export const utils = Object.freeze({
-    /**
-     * Nettoie le cache des breakpoints manuellement
-     */
     clearBreakpointCache: () => {
         breakpointCache.clear();
     },
-
-    /**
-     * Obtient les statistiques du cache
-     */
     getCacheStats: () => ({
         breakpointCache: {
             size: breakpointCache.size,
             maxSize: 100,
         },
     }),
-
-    /**
-     * Valide rapidement si un breakpoint existe
-     */
     isValidBreakpoint: (bp) => {
         const key = bp.startsWith("m") && bp.length === 3 ? bp.slice(1) : bp;
         return validBreakpoints.has(key);
     },
-
-    /**
-     * Normalise une liste de breakpoints (supprime les doublons et invalides)
-     */
     normalizeBreakpoints: (bpList) => {
         if (!Array.isArray(bpList)) return [];
-
         const seen = new Set();
         return bpList.filter((bp) => {
             if (seen.has(bp) || !utils.isValidBreakpoint(bp)) {
@@ -250,5 +319,4 @@ export const utils = Object.freeze({
     },
 });
 
-// Rétrocompatibilité avec l'ancien nom de fonction
 export const addDieseToHex = addHashToHex;

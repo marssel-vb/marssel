@@ -1,5 +1,13 @@
-import { cleanValue, buildMediaQuery } from "../utils/helpers.js";
-import { parseGutterValue } from "../utils/parsed.js";
+import {
+    cleanValue,
+    buildMediaQuery,
+    processGradientColors,
+} from "../utils/helpers.js";
+import {
+    parseGutterValue,
+    parseRGBValue,
+    parseRGBAValue,
+} from "../utils/parsed.js";
 
 export class StyleManager {
     constructor(marssel, config = {}) {
@@ -31,38 +39,293 @@ export class StyleManager {
         // Tables de correspondance pour les propriétés
         this.initPropertyHandlers();
         this.initPseudoClassMap();
+
+        this.dirtySelectors = new Set(); // Nouveaux sélecteurs
+        this.needsFullRebuild = false;
     }
 
     // === INITIALISATION ===
     initPropertyHandlers() {
         this.propertyHandlers = {
-            "icon-size": (value, declarations) =>
-                this.handleIconSize(value, declarations),
-            icon: (value, declarations, selector, parsed) =>
-                this.handleIcon(selector, parsed, declarations),
-            font: (value, declarations) => this.handleFont(value, declarations),
-            transform: (value, declarations) =>
-                declarations.add(`transform: ${cleanValue(value)}`),
+            "icon-size": (value, declarations, selector, parsed) => {
+                const size = this.marssel.iconManager.sizes[value] || value;
+                this.addDeclarationWithImportance(
+                    declarations,
+                    `--icon-size: ${size}`,
+                    parsed.isImportant
+                );
+            },
+
+            icon: (value, declarations, selector, parsed) => {
+                const iconDeclarations =
+                    this.marssel.iconManager.createIconStyles(
+                        selector,
+                        parsed.finalClassName
+                    );
+                if (iconDeclarations?.size > 0) {
+                    iconDeclarations.forEach((decl) => {
+                        this.addDeclarationWithImportance(
+                            declarations,
+                            decl,
+                            parsed.isImportant
+                        );
+                    });
+                }
+            },
+
+            font: (value, declarations, selector, parsed) => {
+                const match = value.match(/^(.*?)(?:\[(\d*)(?:_(.*?))?\])?$/);
+                if (!match) return;
+
+                const fontFamily = match[1].replace(/_/g, " ");
+                const fontWeight =
+                    match[2] && match[2] !== "" ? match[2] : "400";
+                const fontStyle = match[3] === "italic" ? "italic" : "normal";
+
+                this.marssel.fontManager.handleFont(fontFamily, fontWeight);
+
+                this.addDeclarationWithImportance(
+                    declarations,
+                    `font-family: '${fontFamily}', sans-serif`,
+                    parsed.isImportant
+                );
+                this.addDeclarationWithImportance(
+                    declarations,
+                    `font-weight: ${fontWeight}`,
+                    parsed.isImportant
+                );
+                this.addDeclarationWithImportance(
+                    declarations,
+                    `font-style: ${fontStyle}`,
+                    parsed.isImportant
+                );
+            },
+
+            transform: (value, declarations, selector, parsed) => {
+                this.addDeclarationWithImportance(
+                    declarations,
+                    `transform: ${cleanValue(value)}`,
+                    parsed.isImportant
+                );
+            },
+
             gutter: (value, declarations, selector, parsed) =>
                 this.handleGutter(parsed, selector, declarations),
             "gutter-x": (value, declarations, selector, parsed) =>
                 this.handleGutter(parsed, selector, declarations),
             "gutter-y": (value, declarations, selector, parsed) =>
                 this.handleGutter(parsed, selector, declarations),
+
             col: (value, declarations, selector, parsed) =>
                 this.handleColumn(parsed, selector, declarations),
-            content: (value, declarations) =>
-                declarations.add(
-                    `content: "${cleanValue(value.replace(/_/g, " "))}"`
-                ),
-            "bg-linear": (value, declarations) =>
-                declarations.add(
-                    `background: linear-gradient(${cleanValue(value)})`
-                ),
-            "bg-radial": (value, declarations) =>
-                declarations.add(
-                    `background: radial-gradient(${cleanValue(value)})`
-                ),
+
+            content: (value, declarations, selector, parsed) => {
+                this.addDeclarationWithImportance(
+                    declarations,
+                    `content: "${cleanValue(value.replace(/_/g, " "))}"`,
+                    parsed.isImportant
+                );
+            },
+
+            "bg-linear": (value, declarations, selector, parsed) => {
+                // MODIFICATION : Ajouter .replace(/_/g, " ")
+                const processedValue = processGradientColors(
+                    value.replace(/_/g, " ")
+                );
+                this.addDeclarationWithImportance(
+                    declarations,
+                    `background: linear-gradient(${processedValue})`,
+                    parsed.isImportant
+                );
+            },
+
+            "bg-radial": (value, declarations, selector, parsed) => {
+                // MODIFICATION : Ajouter .replace(/_/g, " ")
+                const processedValue = processGradientColors(
+                    value.replace(/_/g, " ")
+                );
+                this.addDeclarationWithImportance(
+                    declarations,
+                    `background: radial-gradient(${processedValue})`,
+                    parsed.isImportant
+                );
+            },
+
+            "c-rgb": (value, declarations, selector, parsed) => {
+                const rgbValue = parseRGBValue(value);
+                this.addDeclarationWithImportance(
+                    declarations,
+                    `color: rgb(${rgbValue})`,
+                    parsed.isImportant
+                );
+            },
+
+            "c-rgba": (value, declarations, selector, parsed) => {
+                const rgbaValue = parseRGBAValue(value);
+                this.addDeclarationWithImportance(
+                    declarations,
+                    `color: rgba(${rgbaValue})`,
+                    parsed.isImportant
+                );
+            },
+
+            "bg-rgb": (value, declarations, selector, parsed) => {
+                const rgbValue = parseRGBValue(value);
+                this.addDeclarationWithImportance(
+                    declarations,
+                    `background-color: rgb(${rgbValue})`,
+                    parsed.isImportant
+                );
+            },
+
+            "bg-rgba": (value, declarations, selector, parsed) => {
+                const rgbaValue = parseRGBAValue(value);
+                this.addDeclarationWithImportance(
+                    declarations,
+                    `background-color: rgba(${rgbaValue})`,
+                    parsed.isImportant
+                );
+            },
+
+            scale: (value, declarations, selector, parsed) => {
+                this.addDeclarationWithImportance(
+                    declarations,
+                    `transform: scale(${cleanValue(value)})`,
+                    parsed.isImportant
+                );
+            },
+
+            rotate: (value, declarations, selector, parsed) => {
+                const rotateValue = cleanValue(value);
+                const unit = rotateValue.includes("deg") ? "" : "deg";
+                this.addDeclarationWithImportance(
+                    declarations,
+                    `transform: rotate(${rotateValue}${unit})`,
+                    parsed.isImportant
+                );
+            },
+
+            translate: (value, declarations, selector, parsed) => {
+                this.addDeclarationWithImportance(
+                    declarations,
+                    `transform: translate(${cleanValue(value)})`,
+                    parsed.isImportant
+                );
+            },
+
+            progress: (value, declarations, selector, parsed) => {
+                this.addDeclarationWithImportance(
+                    declarations,
+                    `--progress-value: ${cleanValue(value)}`,
+                    parsed.isImportant
+                );
+            },
+
+            "progress-value": (value, declarations, selector, parsed) => {
+                this.addDeclarationWithImportance(
+                    declarations,
+                    `--progress-value: ${cleanValue(value)}`,
+                    parsed.isImportant
+                );
+            },
+
+            "progress-color": (value, declarations, selector, parsed) => {
+                const colorValue = this.marssel.domManager.processColor(value);
+                this.addDeclarationWithImportance(
+                    declarations,
+                    `--progress-color: ${colorValue}`,
+                    parsed.isImportant
+                );
+            },
+
+            "progress-bg": (value, declarations, selector, parsed) => {
+                const colorValue = this.marssel.domManager.processColor(value);
+                this.addDeclarationWithImportance(
+                    declarations,
+                    `--progress-background-color: ${colorValue}`,
+                    parsed.isImportant
+                );
+            },
+
+            "progress-height": (value, declarations, selector, parsed) => {
+                this.addDeclarationWithImportance(
+                    declarations,
+                    `--progress-height: ${cleanValue(value)}`,
+                    parsed.isImportant
+                );
+            },
+
+            "progress-radius": (value, declarations, selector, parsed) => {
+                this.addDeclarationWithImportance(
+                    declarations,
+                    `--progress-border-radius: ${cleanValue(value)}`,
+                    parsed.isImportant
+                );
+            },
+            // AJOUTÉ : Handlers pour les animations
+            animation: (value, declarations, selector, parsed) => {
+                this.marssel.animationManager.handleAnimationProperty(
+                    value,
+                    declarations,
+                    parsed
+                );
+            },
+
+            "animation-name": (value, declarations, selector, parsed) => {
+                this.marssel.animationManager.handleAnimationProperty(
+                    value,
+                    declarations,
+                    parsed
+                );
+            },
+
+            "animation-duration": (value, declarations, selector, parsed) => {
+                this.marssel.animationManager.handleAnimationDuration(
+                    value,
+                    declarations,
+                    parsed
+                );
+            },
+
+            "animation-timing": (value, declarations, selector, parsed) => {
+                this.marssel.animationManager.handleAnimationTiming(
+                    value,
+                    declarations,
+                    parsed
+                );
+            },
+
+            "animation-delay": (value, declarations, selector, parsed) => {
+                this.marssel.animationManager.handleAnimationDelay(
+                    value,
+                    declarations,
+                    parsed
+                );
+            },
+
+            "animation-iteration": (value, declarations, selector, parsed) => {
+                this.marssel.animationManager.handleAnimationIteration(
+                    value,
+                    declarations,
+                    parsed
+                );
+            },
+
+            "animation-direction": (value, declarations, selector, parsed) => {
+                this.marssel.animationManager.handleAnimationDirection(
+                    value,
+                    declarations,
+                    parsed
+                );
+            },
+
+            "animation-fill": (value, declarations, selector, parsed) => {
+                this.marssel.animationManager.handleAnimationFillMode(
+                    value,
+                    declarations,
+                    parsed
+                );
+            },
         };
     }
 
@@ -88,6 +351,26 @@ export class StyleManager {
             "read-only",
             "read-write",
         ]);
+
+        // ✅ AJOUT : Pseudo-classes avec paramètres
+        this.functionalPseudos = new Set([
+            "nth-child",
+            "nth-last-child",
+            "nth-of-type",
+            "nth-last-of-type",
+            "not",
+            "is",
+            "where",
+            "has",
+        ]);
+    }
+
+    addDeclarationWithImportance(declarations, declaration, isImportant) {
+        if (isImportant && !declaration.includes("!important")) {
+            declarations.add(declaration + " !important");
+        } else {
+            declarations.add(declaration);
+        }
     }
 
     initLazyObserver() {
@@ -167,7 +450,7 @@ export class StyleManager {
         }
     }
 
-    processElements(elementsToProcess) {
+    /*processElements(elementsToProcess) {
         const classProcessors = {
             hasGroupPseudo: (className) =>
                 className.startsWith("[") && className.includes("]-"),
@@ -191,6 +474,14 @@ export class StyleManager {
                 } else {
                     this.marssel.domManager.processClassName(className);
                 }
+            });
+        });
+    }*/
+
+    processElements(elementsToProcess) {
+        elementsToProcess.forEach(({ classes }) => {
+            classes.forEach((className) => {
+                this.marssel.domManager.processClassOptimized(className);
             });
         });
     }
@@ -271,8 +562,8 @@ export class StyleManager {
     getViewportInfo() {
         const now = performance.now();
 
-        // Cache du viewport pendant 16ms (1 frame)
-        if (now - this.viewportCache.timestamp < 16) {
+        // Cache pendant 100ms au lieu de 16ms pour réduire les recalculs
+        if (now - this.viewportCache.timestamp < 100) {
             return this.viewportCache;
         }
 
@@ -280,10 +571,11 @@ export class StyleManager {
             height: window.innerHeight,
             scrollTop: window.pageYOffset || document.documentElement.scrollTop,
             timestamp: now,
-            get bottomPosition() {
-                return this.scrollTop + this.height;
-            },
         };
+
+        // Calculer bottomPosition une seule fois
+        this.viewportCache.bottomPosition =
+            this.viewportCache.scrollTop + this.viewportCache.height;
 
         return this.viewportCache;
     }
@@ -353,77 +645,221 @@ export class StyleManager {
         this.ensureStyleElement();
 
         const processAndUpdate = () => {
-            this.marssel.domManager.processAllElements();
-            if (this.lazyload) {
-                this.processInitialViewportElements();
-            }
+            // Traiter d'abord les éléments critiques
+            this.processCriticalElements();
+
+            // Force la mise à jour immédiate des styles critiques
             this.updateStyles();
+
+            // Attendre que les styles soient appliqués avant d'afficher
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    // Afficher le body maintenant
+                    document.body.classList.add("marssel-ready");
+
+                    // Puis traiter tous les autres éléments en arrière-plan
+                    this.marssel.domManager.processAllElements();
+
+                    if (this.lazyload) {
+                        this.processInitialViewportElements();
+                    }
+
+                    this.debounceStyleUpdate();
+                });
+            });
         };
 
         if (this.lazyload) {
             this.initLazyObserver();
         }
 
-        requestAnimationFrame(processAndUpdate);
+        // Démarrer le traitement
+        if ("requestIdleCallback" in window) {
+            requestIdleCallback(processAndUpdate);
+        } else {
+            setTimeout(processAndUpdate, 0);
+        }
+    }
+
+    // Nouvelle méthode pour traiter les éléments critiques
+    processCriticalElements() {
+        const criticalElements = this.getCriticalElements();
+
+        // MODIFICATION : Traiter TOUS les éléments critiques immédiatement
+        criticalElements.forEach((element) => {
+            if (!(element instanceof HTMLElement)) return;
+
+            // Traiter l'élément sans condition
+            this.marssel.domManager.processElement(element);
+
+            // Retirer du lazy loading
+            if (this.lazyElements.has(element)) {
+                this.lazyElements.delete(element);
+                if (this.lazyObserver) {
+                    this.lazyObserver.unobserve(element);
+                }
+            }
+        });
+
+        // Traiter les classes de base APRÈS
+        const allBaseClasses = new Set();
+        document.querySelectorAll("*").forEach((element) => {
+            element.classList.forEach((className) => {
+                if (className.includes("---")) {
+                    const baseClass = this.extractBaseClass(className);
+                    if (baseClass) {
+                        allBaseClasses.add(baseClass);
+                    }
+                }
+            });
+        });
+
+        allBaseClasses.forEach((baseClass) => {
+            this.marssel.domManager.pendingClasses.add(baseClass);
+        });
+        this.marssel.domManager.processPendingClasses();
+
+        // Force la mise à jour immédiate
+        this.updateStyles();
+    }
+
+    extractBaseClass(className) {
+        const tripleIndex = className.indexOf("---");
+        if (tripleIndex === -1) return null;
+
+        const componentPart = className.slice(0, tripleIndex);
+        const doubleIndex = componentPart.indexOf("--");
+
+        if (doubleIndex === -1) return componentPart;
+
+        const lastDoubleIndex = componentPart.lastIndexOf("--");
+        return componentPart.slice(lastDoubleIndex + 2);
     }
 
     processInitialViewportElements() {
         if (!this.lazyload) return;
 
+        const allBaseClasses = new Set();
+        document.querySelectorAll("*").forEach((element) => {
+            element.classList.forEach((className) => {
+                if (className.includes("---")) {
+                    const baseClass = this.extractBaseClass(className);
+                    if (baseClass) {
+                        allBaseClasses.add(baseClass);
+                    }
+                }
+            });
+        });
+
+        allBaseClasses.forEach((baseClass) => {
+            this.marssel.domManager.pendingClasses.add(baseClass);
+        });
+        this.marssel.domManager.processPendingClasses();
+        this.updateStyles();
+
+        // Reste du code existant...
         const viewport = this.getViewportInfo();
         const elementsToProcess = [];
+
+        // Traiter en priorité les éléments critiques (header, footer, nav)
+        const criticalElements = this.getCriticalElements();
 
         this.lazyElements.forEach((classes, element) => {
             const rect = element.getBoundingClientRect();
             const isVisible =
                 rect.top < viewport.height + 1000 && rect.bottom > -1000;
+            const isCritical = criticalElements.includes(element);
 
-            if (isVisible) {
-                elementsToProcess.push({ element, classes });
+            // Traiter immédiatement les éléments critiques visibles
+            if (isVisible || isCritical) {
+                elementsToProcess.push({ element, classes, isCritical });
             }
         });
 
         if (elementsToProcess.length > 0) {
-            this.processElements(elementsToProcess);
-            elementsToProcess.forEach(({ element }) => {
-                this.lazyElements.delete(element);
-                this.lazyObserver.unobserve(element);
-            });
+            // Séparer les éléments critiques des autres
+            const criticalToProcess = elementsToProcess.filter(
+                (item) => item.isCritical
+            );
+            const regularToProcess = elementsToProcess.filter(
+                (item) => !item.isCritical
+            );
+
+            // Traiter d'abord les éléments critiques
+            if (criticalToProcess.length > 0) {
+                this.processElements(criticalToProcess);
+                criticalToProcess.forEach(({ element }) => {
+                    this.lazyElements.delete(element);
+                    this.lazyObserver.unobserve(element);
+                });
+            }
+
+            // Puis traiter les éléments réguliers
+            if (regularToProcess.length > 0) {
+                this.processElements(regularToProcess);
+                regularToProcess.forEach(({ element }) => {
+                    this.lazyElements.delete(element);
+                    this.lazyObserver.unobserve(element);
+                });
+            }
         }
+    }
+
+    getCriticalElements() {
+        const criticalElements = [];
+
+        // Utiliser les sélecteurs du DomManager
+        this.marssel.constructor.CRITICAL_SELECTORS.forEach((selector) => {
+            try {
+                const elements = document.querySelectorAll(selector);
+                criticalElements.push(...elements);
+            } catch (e) {
+                console.warn(`Sélecteur invalide: ${selector}`, e);
+            }
+        });
+
+        return criticalElements;
     }
 
     buildSelector(parsed) {
         const baseSelector = parsed.component
             ? `.${parsed.component}`
-            : `.${parsed.finalClassName.replace(/\+/g, "\\+")}`;
+            : `.${parsed.finalClassName
+                  .replace(/\+/g, "\\+")
+                  .replace(/:/g, "\\:")}`;
 
         if (!parsed.pseudoModifiers) return baseSelector;
 
-        const modifiers = parsed.pseudoModifiers.split(
-            /(?<!\[|\(|:)_(?!\]|\)|:)/
-        );
+        const modifiers = parsed.pseudoModifiers.split(":");
         const pseudoSelectors = modifiers.map((mod) => {
+            if (!mod) return "";
             const converted = this.convertPseudoClass(mod);
-            return this.formatPseudoSelector(converted);
+            return `:${converted}`;
         });
 
         return baseSelector + pseudoSelectors.join("");
     }
 
     convertPseudoClass(mod) {
+        // ✅ AJOUT : Gérer les pseudo-classes fonctionnelles avec paramètres
+        // Format attendu: nth-child[2n+1] ou not[.disabled]
+        const functionalMatch = mod.match(/^([a-z-]+)\[(.+)\]$/);
+
+        if (functionalMatch) {
+            const [, pseudoName, params] = functionalMatch;
+
+            if (this.functionalPseudos.has(pseudoName)) {
+                // Remplacer les underscores par des espaces dans les paramètres
+                const cleanParams = params.replace(/_/g, " ");
+                return `${pseudoName}(${cleanParams})`;
+            }
+        }
+
+        // Code existant pour les autres pseudo-classes
         return mod.replace(/([a-z]+)-([a-z]+)/g, (match, p1, p2) => {
             const fullName = `${p1}-${p2}`;
             return this.compoundPseudos.has(fullName) ? fullName : match;
         });
-    }
-
-    formatPseudoSelector(converted) {
-        return converted.includes("[")
-            ? `:${converted
-                  .replace(/\[/g, "(")
-                  .replace(/\]/g, ")")
-                  .replace(/_/g, " ")}`
-            : `:${converted}`;
     }
 
     addFontFace(cssText) {
@@ -431,15 +867,32 @@ export class StyleManager {
     }
 
     updateStyles() {
-        const styleElement = document.getElementById("marssel-styles");
-        if (!styleElement) return;
+        if (this.updateScheduled) return;
 
+        this.updateScheduled = true;
+        requestAnimationFrame(() => {
+            this.updateScheduled = false;
+
+            const styleElement = document.getElementById("marssel-styles");
+            if (!styleElement) return;
+
+            // Utiliser textContent une seule fois au lieu de multiples appendChild
+            const cssChunks = [
+                ...this.fontFaces,
+                ...this.generateRegularRules(),
+                ...this.generateMediaQueryRules(),
+            ];
+
+            styleElement.textContent = cssChunks.join("\n");
+        });
+    }
+
+    updateFullStyles(styleElement) {
         const css = [
             ...this.fontFaces,
             ...this.generateRegularRules(),
             ...this.generateMediaQueryRules(),
         ];
-
         styleElement.textContent = css.join("\n");
     }
 
@@ -535,7 +988,9 @@ export class StyleManager {
 
     generateDeclarations(parsed, selector) {
         const { property, value } = parsed;
-        const declarations = new Set();
+
+        // Réutiliser un Set au lieu d'en créer un nouveau
+        const declarations = this.marssel.domManager.getDeclarationSet();
 
         const handler = this.propertyHandlers[property];
         if (handler) {
@@ -588,7 +1043,8 @@ export class StyleManager {
             declarations,
             direction,
             gutterValue,
-            "margin"
+            "margin",
+            parsed.isImportant
         );
 
         const childSelector = `${selector} > [class*="col-"]`;
@@ -597,7 +1053,8 @@ export class StyleManager {
             childDeclarations,
             direction,
             gutterValue,
-            "padding"
+            "padding",
+            parsed.isImportant
         );
 
         this.addDeclarationsWithMediaQuery(
@@ -607,7 +1064,13 @@ export class StyleManager {
         );
     }
 
-    addGutterDeclarations(declarations, direction, gutterValue, type) {
+    addGutterDeclarations(
+        declarations,
+        direction,
+        gutterValue,
+        type,
+        isImportant = false
+    ) {
         const prefix = type === "margin" ? "-" : "";
         const directions = {
             x: ["left", "right"],
@@ -616,7 +1079,11 @@ export class StyleManager {
         };
 
         (directions[direction] || []).forEach((dir) => {
-            declarations.add(`${type}-${dir}: ${prefix}${gutterValue}`);
+            let declaration = `${type}-${dir}: ${prefix}${gutterValue}`;
+            if (isImportant && !declaration.includes("!important")) {
+                declaration += " !important";
+            }
+            declarations.add(declaration);
         });
     }
 
@@ -682,20 +1149,37 @@ export class StyleManager {
         } else {
             const numericValue = parseInt(cleanValue(value));
             const percentage = ((numericValue / 12) * 100).toFixed(4) + "%";
-
-            if (parsed.breakpoints.length > 0) {
-                declarations.add(`flex: 0 0 ${percentage}`);
-                declarations.add(`max-width: ${percentage}`);
-            } else {
-                declarations.add("flex: 0 0 100%");
-                declarations.add("max-width: 100%");
-                declarations.add("width: 100%");
-            }
+            declarations.add(`flex: 0 0 ${percentage}`);
+            declarations.add(`max-width: ${percentage}`);
         }
     }
 
     handleGenericProperty(parsed, declarations) {
-        const { property, value } = parsed;
+        const { property, value, isImportant } = parsed;
+
+        // AJOUTÉ : Cas spéciaux RGB/RGBA
+        if (
+            property === "bg-rgb" ||
+            property === "bg-rgba" ||
+            property === "c-rgb" ||
+            property === "c-rgba"
+        ) {
+            const cssProperty = property.startsWith("bg-")
+                ? "background-color"
+                : "color";
+            const functionName = property.endsWith("-rgb") ? "rgb" : "rgba";
+
+            let declaration = `${cssProperty}: ${functionName}(${cleanValue(
+                value
+            )})`;
+
+            if (isImportant && !declaration.includes("!important")) {
+                declaration += " !important";
+            }
+
+            declarations.add(declaration);
+            return;
+        }
 
         if (value.startsWith("theme-")) {
             const cssValue = `var(--${value})`;
@@ -704,18 +1188,30 @@ export class StyleManager {
                 property.replace(/_/g, "-");
 
             if (Array.isArray(cssProperty)) {
-                cssProperty.forEach((prop) =>
-                    declarations.add(`${prop}: ${cssValue}`)
-                );
+                cssProperty.forEach((prop) => {
+                    let declaration = `${prop}: ${cssValue}`;
+                    if (isImportant && !declaration.includes("!important")) {
+                        declaration += " !important";
+                    }
+                    declarations.add(declaration);
+                });
             } else {
-                declarations.add(`${cssProperty}: ${cssValue}`);
+                let declaration = `${cssProperty}: ${cssValue}`;
+                if (isImportant && !declaration.includes("!important")) {
+                    declaration += " !important";
+                }
+                declarations.add(declaration);
             }
             return;
         }
 
         if (!this.marssel.constructor.properties[property]) {
             const formattedProperty = property.replace(/_/g, "-");
-            declarations.add(`${formattedProperty}: ${cleanValue(value)}`);
+            let declaration = `${formattedProperty}: ${cleanValue(value)}`;
+            if (isImportant && !declaration.includes("!important")) {
+                declaration += " !important";
+            }
+            declarations.add(declaration);
         } else {
             let cssValue = cleanValue(value);
             const cssProperty = this.marssel.constructor.properties[property];
@@ -725,11 +1221,19 @@ export class StyleManager {
             }
 
             if (Array.isArray(cssProperty)) {
-                cssProperty.forEach((prop) =>
-                    declarations.add(`${prop}: ${cssValue}`)
-                );
+                cssProperty.forEach((prop) => {
+                    let declaration = `${prop}: ${cssValue}`;
+                    if (isImportant && !declaration.includes("!important")) {
+                        declaration += " !important";
+                    }
+                    declarations.add(declaration);
+                });
             } else {
-                declarations.add(`${cssProperty}: ${cssValue}`);
+                let declaration = `${cssProperty}: ${cssValue}`;
+                if (isImportant && !declaration.includes("!important")) {
+                    declaration += " !important";
+                }
+                declarations.add(declaration);
             }
         }
     }

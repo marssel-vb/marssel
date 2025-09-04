@@ -1,4 +1,26 @@
 // Configuration des propriétés CSS avec regroupement logique et optimisations
+export const CACHE_LIMITS = {
+    PARSE_CACHE_MAX: 500, // au lieu de 1000
+    CLASS_CACHE_MAX: 300, // au lieu de illimité
+    SELECTOR_CACHE_MAX: 200,
+};
+
+export const CRITICAL_SELECTORS = [
+    ".no-lazy",
+    "header",
+    "footer",
+    "nav",
+    '[role="banner"]',
+    '[role="contentinfo"]',
+    '[role="navigation"]',
+    ".header",
+    ".footer",
+    ".navbar",
+    ".nav",
+    "main",
+    '[role="main"]',
+];
+
 const CSS_PROPERTIES = Object.freeze({
     // Layout & Display
     layout: {
@@ -113,6 +135,8 @@ const CSS_PROPERTIES = Object.freeze({
         "border-r": "border-right",
         "border-b": "border-bottom",
         "border-l": "border-left",
+        "border-x": ["border-left", "border-right"],
+        "border-y": ["border-top", "border-bottom"],
         "border-w": "border-width",
         "border-col": "border-color",
         "border-style": "border-style",
@@ -142,17 +166,6 @@ const CSS_PROPERTIES = Object.freeze({
         cursor: "cursor",
     },
 
-    // Animations & Transforms
-    animations: {
-        animation: "animation",
-        transform: "transform",
-        scale: "transform",
-        rotate: "transform",
-        translate: "transform",
-        transition: "transition",
-        "transition-duration": "transition-duration",
-    },
-
     // Custom Components
     custom: {
         icon: "icon",
@@ -164,26 +177,32 @@ const CSS_PROPERTIES = Object.freeze({
         "progress-height": "--progress-height",
         "progress-radius": "--progress-border-radius",
     },
+
+    // Animations & Transforms
+    animations: {
+        animation: "animation",
+        "animation-name": "animation-name",
+        "animation-duration": "animation-duration",
+        "animation-timing": "animation-timing-function",
+        "animation-delay": "animation-delay",
+        "animation-iteration": "animation-iteration-count",
+        "animation-direction": "animation-direction",
+        "animation-fill": "animation-fill-mode",
+        transform: "transform",
+        scale: "transform",
+        rotate: "transform",
+        translate: "transform",
+        transition: "transition",
+        "transition-duration": "transition-duration",
+    },
 });
 
-// Cache pour les propriétés aplaties - initialisation lazy
-let flattenedCache = null;
-
-const flattenProperties = () => {
-    if (flattenedCache) return flattenedCache;
-
-    flattenedCache = Object.freeze(
-        Object.values(CSS_PROPERTIES).reduce((acc, group) => {
-            Object.assign(acc, group);
-            return acc;
-        }, Object.create(null)) // Utilise Object.create(null) pour un objet plus propre
-    );
-
-    return flattenedCache;
-};
-
 // Export de la version aplatie pour compatibilité
-export const properties = flattenProperties();
+export const properties = Object.freeze(
+    Object.values(CSS_PROPERTIES).reduce((acc, group) => {
+        return Object.assign(acc, group);
+    }, Object.create(null))
+);
 
 // Breakpoints et containers optimisés
 export const breakpoints = Object.freeze({
@@ -205,12 +224,13 @@ export const containerMaxWidths = Object.freeze({
 
 // Regex optimisées avec compilation unique
 export const REGEX_PATTERNS = Object.freeze({
-    CLASS: /^(?:([a-zA-Z0-9-]+)---)?(?:(?:m--)?([a-z0-9]+(?:--[a-z0-9]+)*)--)?([a-z0-9-]+)-\[(.*?)\](?:-([a-z-_()\[\]]+(?:-[a-z-_()\[\]]+)*))?$/,
+    CLASS: /^(?:([a-zA-Z0-9-]+)---)?(?:(?:m--)?([a-z0-9]+(?:--[a-z0-9]+)*)--)?([a-z0-9-]+)-\[(.*?)\](?::([a-z-_()\[\]]+(?::[a-z-_()\[\]]+)*))?(!)?$/,
 
     COLOR: Object.freeze({
-        HEX: /^[0-9A-Fa-f]{6}$/,
-        RGB: /^(\d+)\s+(\d+)\s+(\d+)$/,
-        RGBA: /^(\d+)\s+(\d+)\s+(\d+)\s+(\d+(?:\.\d+)?)$/,
+        // ✅ MODIFIÉ : Support hex 3 et 6 caractères
+        HEX: /^[0-9A-Fa-f]{3}$|^[0-9A-Fa-f]{6}$/,
+        RGB: /^(\d+),(\d+),(\d+)$/,
+        RGBA: /^(\d+),(\d+),(\d+),(\d*\.?\d+)$/,
         HEX_WITH_HASH: /^#[0-9A-Fa-f]{3,6}$/,
     }),
 

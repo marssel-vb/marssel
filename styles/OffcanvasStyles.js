@@ -30,7 +30,7 @@ export class OffcanvasStyles {
         this.styleManager = styleManager;
     }
 
-    addBaseStyles() {
+    initializeStyles() {
         // Groupement des styles par catégorie pour une meilleure organisation
         this.addCoreStyles();
         this.addHeaderStyles();

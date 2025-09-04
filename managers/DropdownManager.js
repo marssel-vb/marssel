@@ -234,11 +234,11 @@ export class DropdownManager {
         element.classList.add("active");
         menu.style.display = "block";
 
-        // Position dropdown if needed
-        this.positionDropdown(dropdownId);
-
-        // Update stored state
+        // CORRECTION : Mettre à jour l'état D'ABORD
         dropdown.isOpen = true;
+
+        // Appeler le positionnement ENSUITE
+        this.positionDropdown(dropdownId);
     }
 
     closeDropdown(dropdownId) {

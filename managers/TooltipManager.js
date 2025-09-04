@@ -1,9 +1,10 @@
 import { TooltipStyles } from "../styles/TooltipStyles.js";
+import { LRUCache } from "../utils/LRUCache.js";
 
 export class TooltipManager {
     constructor(marssel) {
         this.marssel = marssel;
-        this.tooltips = new Map();
+        this.tooltips = new LRUCache(100);
         this.activeTooltip = null;
         this.tooltipStyles = new TooltipStyles(marssel.styleManager);
 
@@ -37,6 +38,10 @@ export class TooltipManager {
             this.handleMouseOut.bind(this),
             50
         );
+
+        this.boundHandleClick = this.handleClick.bind(this);
+        this.boundHandleKeyDown = this.handleKeyDown.bind(this);
+        this.boundHandleScroll = this.handleScroll.bind(this);
     }
 
     // Utilitaire de debounce
@@ -56,7 +61,7 @@ export class TooltipManager {
         // Vérification d'existence optimisée
         if (!document.querySelector(this.selectors.tooltipTrigger)) return;
 
-        this.tooltipStyles.addBaseStyles();
+        this.tooltipStyles.initializeStyles();
         this.setupEventListeners();
         this.scanForTooltips();
     }
@@ -64,6 +69,8 @@ export class TooltipManager {
     setupEventListeners() {
         // Utilisation de la délégation d'événements avec options optimisées
         const options = { passive: true };
+        // Options spécifiques pour le scroll (capture: true pour le détecter tôt)
+        const scrollOptions = { passive: true, capture: true };
 
         document.addEventListener(
             "mouseover",
@@ -73,13 +80,19 @@ export class TooltipManager {
         document.addEventListener("mouseout", this.debouncedMouseOut, options);
         document.addEventListener(
             "click",
-            this.handleClick.bind(this),
+            this.boundHandleClick, // MODIFIÉ
             options
         );
         document.addEventListener(
             "keydown",
-            this.handleKeyDown.bind(this),
+            this.boundHandleKeyDown, // MODIFIÉ
             options
+        );
+        // NOUVEL ÉCOUTEUR
+        document.addEventListener(
+            "scroll",
+            this.boundHandleScroll,
+            scrollOptions
         );
     }
 
@@ -220,6 +233,13 @@ export class TooltipManager {
 
         const tooltipData = this.tooltips.get(this.activeTooltip);
         if (tooltipData?.options.hideOnEsc) {
+            this.hideTooltip(this.activeTooltip);
+        }
+    }
+
+    handleScroll() {
+        if (this.activeTooltip) {
+            // Cache immédiatement le tooltip actif dès le début du scroll
             this.hideTooltip(this.activeTooltip);
         }
     }
@@ -621,8 +641,13 @@ export class TooltipManager {
         // Suppression des event listeners
         document.removeEventListener("mouseover", this.debouncedMouseOver);
         document.removeEventListener("mouseout", this.debouncedMouseOut);
-        document.removeEventListener("click", this.handleClick);
-        document.removeEventListener("keydown", this.handleKeyDown);
+        document.removeEventListener("click", this.boundHandleClick); // MODIFIÉ
+        document.removeEventListener("keydown", this.boundHandleKeyDown); // MODIFIÉ
+
+        document.removeEventListener("scroll", this.boundHandleScroll, {
+            passive: true,
+            capture: true,
+        });
 
         // Réinitialisation des propriétés
         this.tooltips.clear();

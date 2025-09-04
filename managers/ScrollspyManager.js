@@ -37,8 +37,6 @@ export class ScrollspyManager {
     }
 
     setupEventListeners() {
-        // Optimized scroll handler with requestAnimationFrame
-        window.addEventListener("scroll", this.handleScroll, { passive: true });
         window.addEventListener("resize", this.handleResize, { passive: true });
     }
 
@@ -93,6 +91,7 @@ export class ScrollspyManager {
         }
     }
 
+    // REMPLACEZ CETTE FONCTION
     createScrollspy(navElement) {
         // Early return if already exists
         if (this.scrollspies.has(navElement)) {
@@ -118,6 +117,14 @@ export class ScrollspyManager {
             return null;
         }
 
+        // --- DÉBUT DE LA LOGIQUE HYBRIDE ---
+        // Détecter l'élément de scroll (le conteneur ou la fenêtre)
+        const style = window.getComputedStyle(targetContainer);
+        const isScrollable =
+            style.overflowY === "scroll" || style.overflowY === "auto";
+        const scrollElement = isScrollable ? targetContainer : window;
+        // --- FIN DE LA LOGIQUE HYBRIDE ---
+
         // Create optimized scrollspy instance
         const scrollspyInstance = {
             navElement,
@@ -126,7 +133,15 @@ export class ScrollspyManager {
             options,
             cachedPositions: new Map(), // Cache for section positions
             lastActiveSection: null, // Track last active to avoid unnecessary updates
+            scrollElement: scrollElement, // Stocker l'élément de scroll
         };
+
+        // --- NOUVEL ÉCOUTEUR ---
+        // Ajouter l'écouteur de scroll sur le bon élément
+        scrollElement.addEventListener("scroll", this.handleScroll, {
+            passive: true,
+        });
+        // --- FIN NOUVEL ÉCOUTEUR ---
 
         // Setup smooth scrolling if enabled
         if (options.smoothScroll) {
@@ -173,6 +188,7 @@ export class ScrollspyManager {
         return sections;
     }
 
+    // REMPLACEZ CETTE FONCTION
     setupSmoothScrolling(scrollspy) {
         const clickHandler = (e) => {
             e.preventDefault();
@@ -181,15 +197,31 @@ export class ScrollspyManager {
 
             if (section) {
                 const offset = scrollspy.options.offset;
-                const top =
-                    section.getBoundingClientRect().top +
-                    window.scrollY -
-                    offset;
 
-                window.scrollTo({
-                    top,
-                    behavior: "smooth",
-                });
+                // --- LOGIQUE HYBRIDE ---
+                const isWindowScroll = scrollspy.scrollElement === window;
+
+                if (isWindowScroll) {
+                    // Cas 1: Scroll de la fenêtre (Exemple 1)
+                    const top =
+                        section.getBoundingClientRect().top +
+                        window.scrollY -
+                        offset;
+
+                    window.scrollTo({
+                        top,
+                        behavior: "smooth",
+                    });
+                } else {
+                    // Cas 2: Scroll du conteneur (Exemple 2)
+                    const top = section.offsetTop - offset;
+
+                    scrollspy.targetContainer.scrollTo({
+                        top,
+                        behavior: "smooth",
+                    });
+                }
+                // --- FIN LOGIQUE HYBRIDE ---
             }
         };
 
@@ -201,45 +233,93 @@ export class ScrollspyManager {
         });
     }
 
+    // REMPLACEZ CETTE FONCTION
     refreshScrollspy(scrollspy) {
         // Clear cached positions
         scrollspy.cachedPositions.clear();
+        const isWindowScroll = scrollspy.scrollElement === window;
 
         // Update section positions
         scrollspy.sections.forEach((section) => {
             if (section.section) {
-                const rect = section.section.getBoundingClientRect();
-                const position = {
-                    top: rect.top + window.scrollY,
-                    bottom: rect.top + window.scrollY + rect.height,
-                    height: rect.height,
-                };
-                scrollspy.cachedPositions.set(section.id, position);
+                // --- LOGIQUE HYBRIDE ---
+                if (isWindowScroll) {
+                    // Cas 1: Position par rapport au document
+                    const rect = section.section.getBoundingClientRect();
+                    const position = {
+                        top: rect.top + window.scrollY,
+                        bottom: rect.top + window.scrollY + rect.height,
+                        height: rect.height,
+                    };
+                    scrollspy.cachedPositions.set(section.id, position);
+                } else {
+                    // Cas 2: Position par rapport au conteneur
+                    const position = {
+                        top: section.section.offsetTop,
+                        bottom:
+                            section.section.offsetTop +
+                            section.section.offsetHeight,
+                        height: section.section.offsetHeight,
+                    };
+                    scrollspy.cachedPositions.set(section.id, position);
+                }
+                // --- FIN LOGIQUE HYBRIDE ---
             }
         });
     }
 
+    // REMPLACEZ CETTE FONCTION
     updateScrollspy(scrollspy) {
-        const { sections, options, cachedPositions } = scrollspy;
-        const scrollPosition = window.scrollY + options.offset;
-        const viewportHeight = window.innerHeight;
+        const {
+            sections,
+            options,
+            cachedPositions,
+            targetContainer,
+            scrollElement,
+        } = scrollspy;
 
-        // Find active section using cached positions when possible
+        // --- LOGIQUE HYBRIDE ---
+        const isWindowScroll = scrollElement === window;
+
+        // Obtenir la position de scroll et la hauteur de la "vue"
+        const scrollPosition =
+            (isWindowScroll ? window.scrollY : targetContainer.scrollTop) +
+            options.offset;
+        const viewportHeight = isWindowScroll
+            ? window.innerHeight
+            : targetContainer.clientHeight;
+
+        // Obtenir le rectangle du conteneur de scroll (pour la normalisation)
+        // Si c'est window, son "top" est 0.
+        const containerRect = isWindowScroll
+            ? { top: 0, bottom: viewportHeight }
+            : targetContainer.getBoundingClientRect();
+        // --- FIN LOGIQUE HYBRIDE ---
+
         let activeSection = null;
         let maxVisibility = 0;
 
         for (const section of sections) {
             if (!section.section) continue;
 
-            // Use live rect for accuracy, cached positions for fallback
+            // --- CALCUL UNIVERSEL ---
+            // Obtenir le rectangle de la section (toujours par rapport à la FENÊTRE)
             const rect = section.section.getBoundingClientRect();
+            const sectionHeight = rect.height;
 
-            // Calculate visibility
-            const visibleTop = Math.max(0, rect.top);
-            const visibleBottom = Math.min(viewportHeight, rect.bottom);
+            // Normaliser les positions par rapport au conteneur de SCROLL
+            // top/bottom de la section RELATIF au top/bottom du conteneur de SCROLL
+            const relativeTop = rect.top - containerRect.top;
+            const relativeBottom = rect.bottom - containerRect.top;
+
+            // Calculer la partie visible (normalisée)
+            const visibleTop = Math.max(0, relativeTop);
+            const visibleBottom = Math.min(viewportHeight, relativeBottom); // Limité par la hauteur de la vue
             const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+
             const visibilityPercentage =
-                rect.height > 0 ? visibleHeight / rect.height : 0;
+                sectionHeight > 0 ? visibleHeight / sectionHeight : 0;
+            // --- FIN CALCUL UNIVERSEL ---
 
             if (
                 visibilityPercentage > options.threshold &&
@@ -250,10 +330,12 @@ export class ScrollspyManager {
             }
         }
 
-        // Fallback logic for when no section meets threshold
+        // Fallback logic (utilise maintenant le cache dynamique)
         if (!activeSection) {
             const sectionsAbove = sections.filter((section) => {
                 const cached = cachedPositions.get(section.id);
+                // 'scrollPosition' et 'cached.top' sont tous les deux "offsettés"
+                // ou tous les deux relatifs au document/conteneur, donc la comparaison est juste.
                 return cached && cached.top <= scrollPosition;
             });
 
@@ -302,6 +384,7 @@ export class ScrollspyManager {
         this.updateAll();
     }
 
+    // REMPLACEZ CETTE FONCTION
     destroy(navElement) {
         const scrollspy = this.scrollspies.get(navElement);
         if (!scrollspy) return;
@@ -313,6 +396,14 @@ export class ScrollspyManager {
             });
         }
 
+        // --- LOGIQUE HYBRIDE ---
+        // Supprimer l'écouteur du bon élément
+        scrollspy.scrollElement.removeEventListener(
+            "scroll",
+            this.handleScroll
+        );
+        // --- FIN LOGIQUE HYBRIDE ---
+
         // Clear caches
         scrollspy.cachedPositions.clear();
 
@@ -320,9 +411,10 @@ export class ScrollspyManager {
         this.scrollspies.delete(navElement);
     }
 
+    // REMPLACEZ CETTE FONCTION
     destroyAll() {
         // Clean up global event listeners
-        window.removeEventListener("scroll", this.handleScroll);
+        // window.removeEventListener("scroll", this.handleScroll); // Déjà supprimé
         window.removeEventListener("resize", this.handleResize);
 
         // Clean up mutation observer

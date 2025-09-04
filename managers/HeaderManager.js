@@ -29,6 +29,8 @@ export class HeaderManager {
         // Propriétés CSS raccourcies
         this.CSS_PROPERTIES = properties;
 
+        this.BREAKPOINT_NAMES = Object.keys(breakpoints);
+
         // Configuration par défaut
         this.DEFAULT_CONFIG = {
             logoPosition: "left",
@@ -37,6 +39,7 @@ export class HeaderManager {
             mobileMenuType: "sidebar",
             sidebarPosition: "left",
             sidebarStyle: "overlay",
+            mobileBreakpoint: "md",
         };
 
         this.currentBreakpoint = this.getCurrentBreakpoint();
@@ -50,7 +53,7 @@ export class HeaderManager {
         if (!headerElement) return;
 
         // Initialisation des styles de base
-        this.headerStyles.addBaseStyles();
+        this.headerStyles.initialize();
 
         // Initialisation de tous les headers
         this.initializeAllHeaders();
@@ -135,6 +138,9 @@ export class HeaderManager {
                 dataset.sidebarPosition || this.DEFAULT_CONFIG.sidebarPosition,
             sidebarStyle:
                 dataset.sidebarStyle || this.DEFAULT_CONFIG.sidebarStyle,
+            mobileBreakpoint:
+                dataset.mobileBreakpoint ||
+                this.DEFAULT_CONFIG.mobileBreakpoint,
         };
     }
 
@@ -419,9 +425,6 @@ export class HeaderManager {
     }
 
     updateAllHeadersForBreakpoint(breakpoint) {
-        const isDesktop = this.isDesktopBreakpoint(breakpoint);
-        const isMobile = this.isMobileBreakpoint(breakpoint);
-
         this.headers.forEach((header, id) => {
             this.adjustLayoutForBreakpoint(id);
 
@@ -432,6 +435,8 @@ export class HeaderManager {
 
             // Gestion spécifique de la visibilité des éléments selon le type de menu
             const { element, config } = header;
+            const isDesktop = this.isDesktopBreakpoint(breakpoint, config);
+            const isMobile = this.isMobileBreakpoint(breakpoint, config);
             const toggleButton = element.querySelector(".menu-toggle");
             const mobileMenu = element.querySelector(".mobile-menu");
 
@@ -454,7 +459,10 @@ export class HeaderManager {
         if (!header) return;
 
         const { element, config } = header;
-        const isMobileView = this.isMobileBreakpoint();
+        const isMobileView = this.isMobileBreakpoint(
+            this.currentBreakpoint,
+            config
+        );
         const toggleButton = element.querySelector(".menu-toggle");
 
         // Basculement des classes de vue
@@ -662,18 +670,38 @@ export class HeaderManager {
     }
 
     // Méthode pour vérifier si nous sommes dans un breakpoint mobile
-    isMobileBreakpoint(breakpoint = this.currentBreakpoint) {
-        return ["xs", "sm", "md"].includes(breakpoint);
+    isMobileBreakpoint(
+        breakpoint = this.currentBreakpoint,
+        headerConfig = null
+    ) {
+        if (!headerConfig) {
+            const firstHeader = Array.from(this.headers.values())[0];
+            if (!firstHeader) return breakpoint !== "xxl";
+            headerConfig = firstHeader.config;
+        }
+
+        const mobileLimitName = headerConfig.mobileBreakpoint || "md";
+
+        const currentIdx = this.BREAKPOINT_NAMES.indexOf(breakpoint);
+        const limitIdx = this.BREAKPOINT_NAMES.indexOf(mobileLimitName);
+
+        return currentIdx < limitIdx; // ✅ CORRECT : strictement inférieur
     }
 
     // Méthode pour vérifier si nous sommes dans un breakpoint desktop
-    isDesktopBreakpoint(breakpoint = this.currentBreakpoint) {
-        return ["lg", "xl", "xxl"].includes(breakpoint);
+    isDesktopBreakpoint(
+        breakpoint = this.currentBreakpoint,
+        headerConfig = null
+    ) {
+        return !this.isMobileBreakpoint(breakpoint, headerConfig);
     }
 
     // Initialise la visibilité des éléments selon le breakpoint actuel
     initializeElementVisibility(headerElement, config) {
-        const isMobile = this.isMobileBreakpoint();
+        const isMobile = this.isMobileBreakpoint(
+            this.currentBreakpoint,
+            config
+        );
         const toggleButton = headerElement.querySelector(".menu-toggle");
         const mobileMenu = headerElement.querySelector(".mobile-menu");
 

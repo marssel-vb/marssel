@@ -2,7 +2,19 @@
 
 Ce document liste les changements notables, les correctifs et les nouvelles fonctionnalités introduites dans la librairie **marssel-npm**.
 
-## Version v0.9.6 - 16/12/2025 (Actuelle)
+## Version v0.9.7 - 16/12/2025 (Actuelle)
+
+### ✨ Nouvelles Fonctionnalités (Features)
+
+-   **Nouvelles Icônes** : Ajout d'une nouvelle série d'icônes Marssel.
+
+### 🐛 Corrections de Bugs (Bug Fixes)
+
+-   **Amélioration de la génération de svgs** : Ajout du paramètre `--onlynew` qui permet d'ajouter dans default.icons.mjs seulement les nouvelles icônes.
+
+---
+
+## Version v0.9.6 - 16/12/2025
 
 ### 🐛 Corrections de Bugs (Bug Fixes)
 
@@ -12,7 +24,7 @@ Ce document liste les changements notables, les correctifs et les nouvelles fonc
 
 ---
 
-## Version v0.9.5 - 10/12/2025 (Actuelle)
+## Version v0.9.5 - 10/12/2025
 
 ### ✨ Nouvelles Fonctionnalités (Features)
 

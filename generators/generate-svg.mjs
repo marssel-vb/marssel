@@ -2,6 +2,8 @@
 import fs from "fs";
 import https from "https";
 import { promisify } from "util";
+import { fileURLToPath } from "url"; // Ajout
+import path from "path"; // Ajout
 
 const writeFile = promisify(fs.writeFile);
 const mkdir = promisify(fs.mkdir);
@@ -221,7 +223,27 @@ const ICONS_LIST = [
     "currency-eur",
     "amazon-logo",
     "app-store-logo",
+    "stack",
+    "lightning",
+    "cpu",
+    "users",
+    "grid-four",
+    "trend-up",
+    "x-logo",
+    "github-logo",
+    "book-open",
+    "linkedin-logo",
+    "circle-notch",
+    "spinner",
+    "spinner-ball",
 ];
+
+// --- Déclarations pour le mode --onlynew ---
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const outputDir = "generators";
+const outputFileName = "default-icons.mjs";
+const outputFile = path.join(__dirname, outputFileName);
 
 function fetchIcon(url) {
     return new Promise((resolve, reject) => {
@@ -267,15 +289,51 @@ function generateSvg(content, styleType) {
 async function main() {
     console.log("🎨 Génération des icônes Phosphor...\n");
 
-    const finalJson = {};
+    // 1. Gérer l'argument --onlynew
+    const onlyNew = process.argv.includes("--onlynew");
+    console.log(`Mode "Only New" activé : ${onlyNew ? "Oui" : "Non"}`);
+
+    let finalJson = {};
+    const existingKeys = new Set();
+
+    // 2. Charger le fichier existant si --onlynew est actif
+    if (onlyNew) {
+        try {
+            // Utiliser un chemin dynamique pour l'importation ES
+            const existingModule = await import(`file://${outputFile}`);
+            finalJson = existingModule.icons;
+            Object.keys(finalJson).forEach((key) => existingKeys.add(key));
+            console.log(
+                `Chargement des ${existingKeys.size} icônes existantes.`
+            );
+        } catch (e) {
+            console.log(
+                `⚠️ Fichier existant ${outputFile} non trouvé ou erreur de chargement. Procède à une génération complète.`
+            );
+            // Si l'import échoue (fichier inexistant), finalJson reste {}
+        }
+    }
+
     let totalIcons = 0;
     let failedIcons = 0;
     const failedList = [];
 
+    // 3. Boucler sur les icônes
     for (const iconName of ICONS_LIST) {
         console.log(`📦 Traitement de l'icône: ${iconName}`);
 
         for (const [phosphorStyle, mappedStyle] of Object.entries(STYLES)) {
+            const key =
+                mappedStyle === "outline"
+                    ? iconName
+                    : `${iconName}-${mappedStyle}`;
+
+            // 4. Vérification du mode --onlynew
+            if (onlyNew && existingKeys.has(key)) {
+                console.log(`  ⏭️  Déjà existante: ${key}`);
+                continue; // Passer au style/icône suivant
+            }
+
             const filename =
                 phosphorStyle === "regular"
                     ? `${iconName}.svg`
@@ -287,11 +345,6 @@ async function main() {
 
                 if (svgContent) {
                     const cleanedContent = cleanSvg(svgContent);
-                    const key =
-                        mappedStyle === "outline"
-                            ? iconName
-                            : `${iconName}-${mappedStyle}`;
-
                     const finalSvg = generateSvg(cleanedContent, mappedStyle);
 
                     finalJson[key] = {
@@ -316,11 +369,9 @@ async function main() {
         }
     }
 
-    // Créer le dossier
-    await mkdir("generators", { recursive: true });
+    // 5. Sauvegarde
+    await mkdir(outputDir, { recursive: true });
 
-    // Sauvegarder
-    const outputFile = "generators/default-icons.mjs";
     const jsContent = `export const icons = ${JSON.stringify(
         finalJson,
         null,
@@ -329,8 +380,9 @@ async function main() {
 
     await writeFile(outputFile, jsContent, "utf-8");
 
+    // 6. Rapport final
     console.log(`\n✨ Terminé!`);
-    console.log(`📊 ${totalIcons} icônes générées avec succès`);
+    console.log(`📊 ${totalIcons} icônes générées/téléchargées avec succès`);
     console.log(`❌ ${failedIcons} icônes échouées`);
     console.log(`💾 Fichier créé: ${outputFile}`);
     console.log(`📈 Nombre total d'entrées: ${Object.keys(finalJson).length}`);

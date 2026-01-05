@@ -2,7 +2,7 @@
 
 Ce document liste les changements notables, les correctifs et les nouvelles fonctionnalités introduites dans la librairie **marssel-npm**.
 
-## Version v0.9.7 - 16/12/2025 (Actuelle)
+## Version v0.9.7 - 14/12/2025 (Actuelle)
 
 ### ✨ Nouvelles Fonctionnalités (Features)
 
@@ -14,7 +14,7 @@ Ce document liste les changements notables, les correctifs et les nouvelles fonc
 
 ---
 
-## Version v0.9.6 - 16/12/2025
+## Version v0.9.6 - 14/12/2025
 
 ### 🐛 Corrections de Bugs (Bug Fixes)
 

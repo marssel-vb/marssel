@@ -24,7 +24,7 @@ Ce document liste les changements notables, les correctifs et les nouvelles fonc
 
 ---
 
-## Version v0.9.5 - 10/12/2025
+## Version v0.9.5 - 07/12/2025
 
 ### ✨ Nouvelles Fonctionnalités (Features)
 
@@ -46,7 +46,7 @@ Ce document liste les changements notables, les correctifs et les nouvelles fonc
 
 ---
 
-## Version v0.9.4 - 05/12/2025
+## Version v0.9.4 - 07/12/2025
 
 ### 🐛 Corrections de Bugs (Bug Fixes)
 
@@ -55,7 +55,7 @@ Ce document liste les changements notables, les correctifs et les nouvelles fonc
 
 ---
 
-## Version v0.9.3 - 04/12/2025
+## Version v0.9.3 - 30/11/2025
 
 ### ✨ Nouvelles Fonctionnalités (Features)
 
@@ -63,7 +63,7 @@ Ce document liste les changements notables, les correctifs et les nouvelles fonc
 
 ---
 
-## Version v0.9.2 - 04/12/2025
+## Version v0.9.2 - 30/11/2025
 
 ### ✨ Nouvelles Fonctionnalités (Features)
 
@@ -84,7 +84,7 @@ Ce document liste les changements notables, les correctifs et les nouvelles fonc
 
 ---
 
-## Version v0.9.0 - 25/11/2025
+## Version v0.9.0 - 23/11/2025
 
 ### ✨ Nouvelles Fonctionnalités (Features)
 
@@ -98,7 +98,7 @@ Ce document liste les changements notables, les correctifs et les nouvelles fonc
 
 ---
 
-## Version v0.8.0 - 14/11/2025
+## Version v0.8.0 - 16/11/2025
 
 ### ✨ Nouvelles Fonctionnalités (Features)
 
@@ -111,7 +111,7 @@ Ce document liste les changements notables, les correctifs et les nouvelles fonc
 
 ---
 
-## Version v0.7.0 - 06/11/2025
+## Version v0.7.0 - 09/11/2025
 
 ### ✨ Nouvelles Fonctionnalités (Features)
 
@@ -125,7 +125,7 @@ Ce document liste les changements notables, les correctifs et les nouvelles fonc
 
 ---
 
-## Version v0.6.0 - 17/10/2025
+## Version v0.6.0 - 19/10/2025
 
 ### 🐛 Corrections de Bugs (Bug Fixes)
 
@@ -134,7 +134,7 @@ Ce document liste les changements notables, les correctifs et les nouvelles fonc
 
 ---
 
-## Version v0.5.0 - 30/09/2025
+## Version v0.5.0 - 28/09/2025
 
 ### 🔨 Optimisation et Améliorations Internes
 
@@ -148,7 +148,7 @@ Ce document liste les changements notables, les correctifs et les nouvelles fonc
 
 ---
 
-## Version v0.4.0 - 24/09/2025
+## Version v0.4.0 - 21/09/2025
 
 ### 🐛 Corrections de Bugs (Bug Fixes)
 
@@ -161,7 +161,7 @@ Ce document liste les changements notables, les correctifs et les nouvelles fonc
 
 ---
 
-## Version v0.3.0 - 04/09/2025
+## Version v0.3.0 - 07/09/2025
 
 ### ✨ Nouvelles Fonctionnalités (Features)
 
@@ -174,7 +174,7 @@ Ce document liste les changements notables, les correctifs et les nouvelles fonc
 
 ---
 
-## Version v0.2.0 - 16/07/2025
+## Version v0.2.0 - 13/07/2025
 
 ### ✨ Nouvelles Fonctionnalités (Features)
 
@@ -186,7 +186,7 @@ Ce document liste les changements notables, les correctifs et les nouvelles fonc
 
 ---
 
-## Version v0.1.0 - 27/06/2025
+## Version v0.1.0 - 29/06/2025
 
 ### 🔨 Optimisation et Améliorations Internes
 
@@ -199,7 +199,7 @@ Ce document liste les changements notables, les correctifs et les nouvelles fonc
 
 ---
 
-## Version v0.0.1 - Initialisation (12/05/2025)
+## Version v0.0.1 - Initialisation (11/05/2025)
 
 -   **Initialisation du projet** Marssel-npm.
 -   **Mise en place des Managers de base :** `Carousel`, `DOM`, `Dropdown`, `Font`, `Header`, `Modal`, `Offcanvas`, `Popover`, `Scrollspy`, `Style`, `Toast`, et `Tooltip`.

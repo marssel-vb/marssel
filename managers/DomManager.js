@@ -1,5 +1,9 @@
 import { parseClassName, parseClassPart } from "../utils/parsed.js";
-import { cleanValue, processGradientColors } from "../utils/helpers.js";
+import {
+    cleanValue,
+    addHashToHex,
+    processGradientColors,
+} from "../utils/helpers.js";
 import { LRUCache } from "../utils/LRUCache.js";
 
 // Pré-compilation des regex optimisées
@@ -49,6 +53,9 @@ export class DomManager {
 
         this.processedElements = new WeakSet();
         this.processedElementsCount = 0;
+
+        // Cache des classes déjà traitées
+        this.processedClasses = new Set();
     }
 
     autoAddBaseClasses(element) {
@@ -69,7 +76,7 @@ export class DomManager {
                     if (
                         this.isBaseClassAppropriateForElement(
                             baseClass,
-                            element
+                            element,
                         )
                     ) {
                         classesToAdd.add(baseClass);
@@ -117,7 +124,8 @@ export class DomManager {
 
             // Vérifier si la classe de base ressemble à  un composant
             const isComponentClass = componentClasses.some(
-                (comp) => baseClass.startsWith(comp) || baseClass.includes(comp)
+                (comp) =>
+                    baseClass.startsWith(comp) || baseClass.includes(comp),
             );
 
             // Vérifier aussi les patterns numériques (btn-1, card-2, etc.)
@@ -189,7 +197,7 @@ export class DomManager {
                 this.processingScheduled = true;
                 requestAnimationFrame(() => {
                     elementsToProcess.forEach((element) =>
-                        this.processElement(element)
+                        this.processElement(element),
                     );
                     this.processPendingClasses();
                     this.processingScheduled = false;
@@ -366,11 +374,22 @@ export class DomManager {
         const stylingClasses = this.filterStylingClasses(classList);
         if (!stylingClasses.length) return;
 
-        // MODIFICATION : Si critique, ne JAMAIS utiliser le lazy loading
-        if (isCritical) {
+        // MODIFICATION : Si critique OU si l'élément a .no-lazy, traiter immédiatement
+        if (isCritical || element.classList.contains("no-lazy")) {
             this.addClassesToPending(stylingClasses);
             this.processPendingClasses();
             return;
+        }
+
+        // MODIFICATION : Vérifier aussi les parents pour .no-lazy
+        let parent = element.parentElement;
+        while (parent) {
+            if (parent.classList && parent.classList.contains("no-lazy")) {
+                this.addClassesToPending(stylingClasses);
+                this.processPendingClasses();
+                return;
+            }
+            parent = parent.parentElement;
         }
 
         if (this.marssel.styleManager.lazyload) {
@@ -461,6 +480,11 @@ export class DomManager {
     }
 
     processClassOptimized(className) {
+        // Vérifier si la classe a déjà été traitée
+        if (this.processedClasses.has(className)) {
+            return;
+        }
+
         // Essayer d'abord le traitement des pseudo-classes compactes
         if (this.processPseudoCompactStyles(className)) {
             return;
@@ -475,7 +499,7 @@ export class DomManager {
         // 1. ✅ PRIORITÉ MAX : [styles]>enfant:pseudo (le cas problématique)
         if (className.startsWith("[") && className.includes("]>")) {
             const groupChildMatch = className.match(
-                REGEXES.GROUP_CHILD_AFTER_BRACKET
+                REGEXES.GROUP_CHILD_AFTER_BRACKET,
             );
             if (groupChildMatch) {
                 this.processGroupChildAfterBracket(groupChildMatch, className);
@@ -490,7 +514,7 @@ export class DomManager {
             className.includes("]")
         ) {
             const innerChildMatch = className.match(
-                /^\[(.*?>\w+(?::\w+)*)\](?::(\w+(?::\w+)*))?(!)?$/
+                /^\[(.*?>\w+(?::\w+)*)\](?::(\w+(?::\w+)*))?(!)?$/,
             );
             if (innerChildMatch) {
                 this.processInnerChildSelector(innerChildMatch, className);
@@ -524,6 +548,11 @@ export class DomManager {
         } else {
             this.processClassName(className);
         }
+
+        // Marquer comme traitée
+        this.processedClasses.add(className);
+
+        this.marssel.styleManager.loadedClasses.add(className);
     }
 
     /**
@@ -579,7 +608,7 @@ export class DomManager {
                     fullClassName,
                     pseudoModifier,
                     breakpoints,
-                    isGroupImportant
+                    isGroupImportant,
                 );
                 continue;
             }
@@ -593,7 +622,7 @@ export class DomManager {
                     declarations,
                     property,
                     value,
-                    finalIsImportant
+                    finalIsImportant,
                 );
             }
         }
@@ -602,7 +631,7 @@ export class DomManager {
             this.marssel.styleManager.addDeclarationsWithMediaQuery(
                 breakpoints,
                 selector,
-                declarations
+                declarations,
             );
         }
         this.returnDeclarationSet(declarations);
@@ -618,7 +647,7 @@ export class DomManager {
         const [componentWithBreakpoints, stylesBlock] =
             workingClassName.split("---");
         const { breakpoints, component } = this.parseBreakpoints(
-            componentWithBreakpoints
+            componentWithBreakpoints,
         );
 
         const { cleanStylesBlock, pseudoModifier, isImportant } =
@@ -634,7 +663,7 @@ export class DomManager {
         const baseSelector = this.generateSelectorCached(
             component,
             pseudoModifier,
-            childSelector
+            childSelector,
         );
         const declarations = this.getDeclarationSet();
 
@@ -644,14 +673,14 @@ export class DomManager {
             component,
             pseudoModifier,
             breakpoints,
-            finalImportant // ✅ Passer finalImportant au lieu de isImportant
+            finalImportant, // ✅ Passer finalImportant au lieu de isImportant
         );
 
         if (declarations.size > 0) {
             this.marssel.styleManager.addDeclarationsWithMediaQuery(
                 breakpoints,
                 baseSelector,
-                declarations
+                declarations,
             );
         }
 
@@ -757,7 +786,7 @@ export class DomManager {
         const stylesList = this.parseStylesList(`[${stylesBlock}]`);
         const selector = this.generateSelectorCached(
             cleanComponent,
-            pseudoModifier
+            pseudoModifier,
         );
         const declarations = this.getDeclarationSet();
 
@@ -767,14 +796,14 @@ export class DomManager {
             cleanComponent,
             pseudoModifier,
             breakpoints,
-            isImportant
+            isImportant,
         );
 
         if (declarations.size > 0) {
             this.marssel.styleManager.addDeclarationsWithMediaQuery(
                 breakpoints,
                 selector,
-                declarations
+                declarations,
             );
         }
 
@@ -797,7 +826,7 @@ export class DomManager {
         component,
         pseudoModifier,
         breakpoints,
-        isImportant = false
+        isImportant = false,
     ) {
         const escapedComponent = component.replace(/[[\]]/g, "\\$&");
 
@@ -808,7 +837,7 @@ export class DomManager {
                     escapedComponent,
                     pseudoModifier,
                     breakpoints,
-                    isImportant // Passer isImportant ici
+                    isImportant, // Passer isImportant ici
                 );
                 continue;
             }
@@ -822,7 +851,7 @@ export class DomManager {
                     declarations,
                     property,
                     value,
-                    styleIsImportant
+                    styleIsImportant,
                 );
             }
         }
@@ -833,7 +862,7 @@ export class DomManager {
         escapedComponent, // Attention: ici on reçoit souvent le fullClassName brut
         pseudoModifier,
         breakpoints,
-        isImportant = false
+        isImportant = false,
     ) {
         // Utiliser la regex mise à jour (supporte : et 0-9 dans l'enfant)
         const childMatch = style.match(REGEXES.CHILD_STYLE_WITH_IMPORTANT);
@@ -851,7 +880,7 @@ export class DomManager {
             // C'est un composant simple (ex: "btn")
             baseSelector = this.generateSelector(
                 escapedComponent,
-                pseudoModifier
+                pseudoModifier,
             );
         }
 
@@ -873,13 +902,13 @@ export class DomManager {
             childDeclarations,
             property,
             value,
-            styleIsImportant
+            styleIsImportant,
         );
 
         this.marssel.styleManager.addDeclarationsWithMediaQuery(
             breakpoints,
             childSelector,
-            childDeclarations
+            childDeclarations,
         );
 
         this.returnDeclarationSet(childDeclarations);
@@ -925,7 +954,7 @@ export class DomManager {
                     declarations,
                     parsed.property,
                     parsed.value,
-                    styleIsImportant
+                    styleIsImportant,
                 );
             }
         }
@@ -933,7 +962,7 @@ export class DomManager {
         this.marssel.styleManager.addDeclarationsWithMediaQuery(
             breakpoints,
             selector,
-            declarations
+            declarations,
         );
         this.returnDeclarationSet(declarations);
     }
@@ -941,7 +970,7 @@ export class DomManager {
     processStandardCombined(className, isImportant = false) {
         const parts = className.split("+");
         const { breakpointPrefix, breakpoints } = this.extractBreakpoints(
-            parts[0]
+            parts[0],
         );
 
         // Extraire le pseudo-sélecteur s'il existe
@@ -957,7 +986,7 @@ export class DomManager {
             const adjustedPart = this.adjustPartWithBreakpoints(
                 part,
                 breakpointPrefix,
-                index
+                index,
             );
             const parsed = parseClassName(adjustedPart);
 
@@ -967,7 +996,7 @@ export class DomManager {
                     declarations,
                     parsed.property,
                     parsed.value,
-                    styleIsImportant
+                    styleIsImportant,
                 );
             }
         }
@@ -975,7 +1004,7 @@ export class DomManager {
         this.marssel.styleManager.addDeclarationsWithMediaQuery(
             breakpoints,
             selector,
-            declarations
+            declarations,
         );
         this.returnDeclarationSet(declarations);
     }
@@ -1013,7 +1042,7 @@ export class DomManager {
             const styleIsImportant = isImportant || Boolean(importantFlag);
             this.processGroupedStyles(
                 [, groupedStyles, sharedModifier],
-                styleIsImportant
+                styleIsImportant,
             );
             return;
         }
@@ -1036,14 +1065,14 @@ export class DomManager {
 
     processGroupedStyles(
         [, groupedStyles, sharedModifier, importantFlag],
-        isImportant = false
+        isImportant = false,
     ) {
         const styleIsImportant = isImportant || Boolean(importantFlag);
         const styles = groupedStyles.split("+").filter(Boolean);
         for (const style of styles) {
             this.processSingleStyle(
                 `${style}-${sharedModifier}`,
-                styleIsImportant
+                styleIsImportant,
             );
         }
     }
@@ -1068,7 +1097,7 @@ export class DomManager {
             return this.processGroupChildSelector(
                 groupMatch,
                 className,
-                isImportant
+                isImportant,
             );
         }
 
@@ -1098,12 +1127,12 @@ export class DomManager {
             declarations,
             property,
             value,
-            styleIsImportant
+            styleIsImportant,
         );
         this.marssel.styleManager.addDeclarationsWithMediaQuery(
             breakpoints,
             selector,
-            declarations
+            declarations,
         );
 
         this.returnDeclarationSet(declarations);
@@ -1150,7 +1179,7 @@ export class DomManager {
                         parentDeclarations,
                         property,
                         value,
-                        finalImportant
+                        finalImportant,
                     );
                 }
             }
@@ -1159,7 +1188,7 @@ export class DomManager {
                 this.marssel.styleManager.addDeclarationsWithMediaQuery(
                     [],
                     parentSelector,
-                    parentDeclarations
+                    parentDeclarations,
                 );
             }
             this.returnDeclarationSet(parentDeclarations);
@@ -1182,7 +1211,7 @@ export class DomManager {
                     childDeclarations,
                     property,
                     value,
-                    finalImportant
+                    finalImportant,
                 );
             }
         }
@@ -1191,7 +1220,7 @@ export class DomManager {
             this.marssel.styleManager.addDeclarationsWithMediaQuery(
                 [],
                 finalSelector,
-                childDeclarations
+                childDeclarations,
             );
         }
 
@@ -1253,7 +1282,7 @@ export class DomManager {
                         parentDeclarations,
                         property,
                         value,
-                        finalImportant
+                        finalImportant,
                     );
                 }
             }
@@ -1262,7 +1291,7 @@ export class DomManager {
                 this.marssel.styleManager.addDeclarationsWithMediaQuery(
                     [],
                     parentSelector,
-                    parentDeclarations
+                    parentDeclarations,
                 );
             }
             this.returnDeclarationSet(parentDeclarations);
@@ -1294,7 +1323,7 @@ export class DomManager {
                     childDeclarations,
                     property,
                     value,
-                    finalImportant
+                    finalImportant,
                 );
             }
         }
@@ -1303,7 +1332,7 @@ export class DomManager {
             this.marssel.styleManager.addDeclarationsWithMediaQuery(
                 [],
                 childFullSelector,
-                childDeclarations
+                childDeclarations,
             );
         }
 
@@ -1349,7 +1378,7 @@ export class DomManager {
             // Gérer les styles enfants explicites s'il y en a (ceux avec >)
             if (prop.includes(">")) {
                 const childMatch = prop.match(
-                    REGEXES.CHILD_STYLE_WITH_IMPORTANT
+                    REGEXES.CHILD_STYLE_WITH_IMPORTANT,
                 );
                 if (childMatch) {
                     const [
@@ -1368,7 +1397,7 @@ export class DomManager {
                         childDeclarations,
                         property,
                         value,
-                        finalImportant
+                        finalImportant,
                     );
                 }
             } else {
@@ -1382,7 +1411,7 @@ export class DomManager {
                         childDeclarations,
                         property,
                         value,
-                        finalImportant
+                        finalImportant,
                     );
                 }
             }
@@ -1392,7 +1421,7 @@ export class DomManager {
             this.marssel.styleManager.addDeclarationsWithMediaQuery(
                 [],
                 childFullSelector,
-                childDeclarations
+                childDeclarations,
             );
         }
 
@@ -1415,14 +1444,14 @@ export class DomManager {
             case "bg":
             case "background-color":
                 cssDeclarationOrArray = `background-color: ${this.processColor(
-                    processedValue
+                    processedValue,
                 )}`;
                 break;
 
             case "c":
             case "color":
                 cssDeclarationOrArray = `color: ${this.processColor(
-                    processedValue
+                    processedValue,
                 )}`;
                 break;
 
@@ -1445,14 +1474,14 @@ export class DomManager {
             case "bg-linear":
                 // MODIFICATION : Utiliser la fonction importée
                 cssDeclarationOrArray = `background: linear-gradient(${processGradientColors(
-                    processedValue
+                    processedValue,
                 )})`;
                 break;
 
             case "bg-radial":
                 // MODIFICATION : Utiliser la fonction importée
                 cssDeclarationOrArray = `background: radial-gradient(${processGradientColors(
-                    processedValue
+                    processedValue,
                 )})`;
                 break;
 
@@ -1464,14 +1493,14 @@ export class DomManager {
                 this.processFontDeclaration(
                     declarations,
                     processedValue,
-                    isImportant
+                    isImportant,
                 );
                 return;
 
             default:
                 cssDeclarationOrArray = this.processGenericDeclaration(
                     property,
-                    processedValue
+                    processedValue,
                 );
         }
 
@@ -1505,7 +1534,7 @@ export class DomManager {
                 const placeholder = `__FUNC_${functions.length}__`;
                 functions.push(match);
                 return placeholder;
-            }
+            },
         );
 
         // Maintenant traiter les couleurs hexadécimales
@@ -1528,7 +1557,7 @@ export class DomManager {
             // Ne PAS toucher aux valeurs avec unités CSS
             if (
                 /(\d+\.?\d*)(deg|turn|rad|grad|px|em|rem|%|vh|vw|vmin|vmax)$/i.test(
-                    trimmed
+                    trimmed,
                 )
             ) {
                 return part;
@@ -1620,7 +1649,15 @@ export class DomManager {
         }
 
         const cssProperty = this.props[property] || property.replace(/_/g, "-");
-        const cssValue = cleanValue(value);
+        const shouldProcessColor = this.isColorProperty(property);
+
+        // ✅ FIX: Appliquer addHashToHex sur TOUTES les valeurs après cleanValue
+        let cssValue;
+        if (shouldProcessColor) {
+            cssValue = cleanValue(value);
+        } else {
+            cssValue = addHashToHex(cleanValue(value));
+        }
 
         if (Array.isArray(cssProperty)) {
             // Pour les propriétés multiples, on les traite séparément
@@ -1628,6 +1665,14 @@ export class DomManager {
         } else {
             return `${cssProperty}: ${cssValue}`;
         }
+    }
+
+    isColorProperty(property) {
+        return (
+            ["bg", "c"].includes(property) ||
+            property.startsWith("bg-") ||
+            property.startsWith("c-")
+        );
     }
 
     processColor(value) {
@@ -1645,7 +1690,7 @@ export class DomManager {
         if (value.includes("theme-")) {
             return value.replace(
                 /\btheme-([a-zA-Z0-9-]+)\b/g,
-                "var(--theme-$1)"
+                "var(--theme-$1)",
             );
         }
 
@@ -1669,7 +1714,7 @@ export class DomManager {
         const styleIsImportant = isImportant || Boolean(importantFlag);
         const selector = `.${className.replace(
             /[[\]+!:>.]/g,
-            "\\$&"
+            "\\$&",
         )}:${pseudoSelector}`;
         const declarations = this.getDeclarationSet();
 
@@ -1683,7 +1728,7 @@ export class DomManager {
                     className, // Utilise la classe entière comme base
                     pseudoSelector, // Passe le pseudo (ex: hover)
                     [],
-                    styleIsImportant
+                    styleIsImportant,
                 );
                 continue;
             }
@@ -1697,7 +1742,7 @@ export class DomManager {
                     declarations,
                     property,
                     value,
-                    propIsImportant
+                    propIsImportant,
                 );
             }
         }
@@ -1705,7 +1750,7 @@ export class DomManager {
         this.marssel.styleManager.addDeclarationsWithMediaQuery(
             [],
             selector,
-            declarations
+            declarations,
         );
         this.returnDeclarationSet(declarations);
         return true;
@@ -1730,7 +1775,7 @@ export class DomManager {
                     fullClassName,
                     null,
                     [],
-                    isGroupImportant
+                    isGroupImportant,
                 );
                 continue;
             }
@@ -1744,7 +1789,7 @@ export class DomManager {
                     declarations,
                     property,
                     value,
-                    finalIsImportant
+                    finalIsImportant,
                 );
             }
         }
@@ -1753,7 +1798,7 @@ export class DomManager {
             this.marssel.styleManager.addDeclarationsWithMediaQuery(
                 [],
                 selector,
-                declarations
+                declarations,
             );
         }
         this.returnDeclarationSet(declarations);

@@ -62,14 +62,14 @@ export class Marssel {
         // CORRECTION 5: Vérifications plus robustes
         if (!defaultThemes || typeof defaultThemes !== "object") {
             console.warn(
-                "defaultThemes manquant ou invalide, utilisation d'un objet vide"
+                "defaultThemes manquant ou invalide, utilisation d'un objet vide",
             );
             defaultThemes = {};
         }
 
         if (!customThemes || typeof customThemes !== "object") {
             console.warn(
-                "customThemes manquant ou invalide, utilisation d'un objet vide"
+                "customThemes manquant ou invalide, utilisation d'un objet vide",
             );
             customThemes = {};
         }
@@ -169,12 +169,17 @@ export class Marssel {
                     } catch (error) {
                         console.warn(
                             `Erreur initialisation ${manager}:`,
-                            error
+                            error,
                         );
                     }
                 });
 
                 this.domManager.processAllElements();
+
+                // Nettoyer le cache au déchargement de la page
+                window.addEventListener("beforeunload", () => {
+                    this.styleManager.saveCachedStyles();
+                });
 
                 // Marquer comme prêt immédiatement après le traitement
                 requestAnimationFrame(() => {
@@ -185,6 +190,11 @@ export class Marssel {
         } catch (error) {
             console.error("⚠ Erreur initialisation Marssel:", error);
         }
+    }
+
+    clearStyleCache() {
+        sessionStorage.removeItem(this.styleManager.STORAGE_KEY);
+        console.log("🗑️ Cache styles nettoyé");
     }
 
     preprocessAllCompactClasses() {
@@ -323,7 +333,7 @@ export class Marssel {
             if (parsed) {
                 const genDeclarations = this.styleManager.generateDeclarations(
                     parsed,
-                    cssSelector
+                    cssSelector,
                 );
                 genDeclarations.forEach((decl) => declarations.add(decl));
             }
@@ -332,7 +342,7 @@ export class Marssel {
         this.styleManager.addDeclarationsWithMediaQuery(
             [],
             cssSelector,
-            declarations
+            declarations,
         );
     }
 

@@ -88,14 +88,6 @@ const ICONS_LIST = [
     "check",
     "check-circle",
     "check-square",
-    "chevron-down",
-    "chevron-left",
-    "chevron-right",
-    "chevron-up",
-    "chevron-double-down",
-    "chevron-double-left",
-    "chevron-double-right",
-    "chevron-double-up",
     "clipboard",
     "clock",
     "cloud",
@@ -119,7 +111,6 @@ const ICONS_LIST = [
     "download",
     "dribbble-logo",
     "drop",
-    "ear-fill",
     "envelope",
     "eraser",
     "export",
@@ -152,7 +143,6 @@ const ICONS_LIST = [
     "heart-straight",
     "house",
     "image",
-    "inbox",
     "info",
     "instagram-logo",
     "key",
@@ -165,7 +155,6 @@ const ICONS_LIST = [
     "map-pin",
     "magic-wand",
     "magnifying-glass",
-    "map",
     "microphone",
     "minus",
     "monitor",
@@ -182,7 +171,6 @@ const ICONS_LIST = [
     "person",
     "phone",
     "picture-in-picture",
-    "pin",
     "play",
     "plus",
     "power",
@@ -219,7 +207,6 @@ const ICONS_LIST = [
     "wrench",
     "x",
     "youtube-logo",
-    "zap",
     "currency-eur",
     "amazon-logo",
     "app-store-logo",
@@ -236,6 +223,7 @@ const ICONS_LIST = [
     "circle-notch",
     "spinner",
     "spinner-ball",
+    "gauge",
 ];
 
 // --- Déclarations pour le mode --onlynew ---
@@ -304,11 +292,11 @@ async function main() {
             finalJson = existingModule.icons;
             Object.keys(finalJson).forEach((key) => existingKeys.add(key));
             console.log(
-                `Chargement des ${existingKeys.size} icônes existantes.`
+                `Chargement des ${existingKeys.size} icônes existantes.`,
             );
         } catch (e) {
             console.log(
-                `⚠️ Fichier existant ${outputFile} non trouvé ou erreur de chargement. Procède à une génération complète.`
+                `⚠️ Fichier existant ${outputFile} non trouvé ou erreur de chargement. Procède à une génération complète.`,
             );
             // Si l'import échoue (fichier inexistant), finalJson reste {}
         }
@@ -358,7 +346,7 @@ async function main() {
                     failedIcons++;
                     failedList.push(`${iconName}-${phosphorStyle}`);
                     console.log(
-                        `  ⚠️  Non trouvée: ${iconName}-${phosphorStyle}`
+                        `  ⚠️  Non trouvée: ${iconName}-${phosphorStyle}`,
                     );
                 }
             } catch (error) {
@@ -375,7 +363,7 @@ async function main() {
     const jsContent = `export const icons = ${JSON.stringify(
         finalJson,
         null,
-        2
+        2,
     )};\n`;
 
     await writeFile(outputFile, jsContent, "utf-8");

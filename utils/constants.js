@@ -201,7 +201,7 @@ const CSS_PROPERTIES = Object.freeze({
 export const properties = Object.freeze(
     Object.values(CSS_PROPERTIES).reduce((acc, group) => {
         return Object.assign(acc, group);
-    }, Object.create(null))
+    }, Object.create(null)),
 );
 
 // Breakpoints et containers optimisés

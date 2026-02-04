@@ -1,5 +1,6 @@
 import {
     cleanValue,
+    addHashToHex,
     buildMediaQuery,
     processGradientColors,
 } from "../utils/helpers.js";
@@ -42,6 +43,15 @@ export class StyleManager {
 
         this.dirtySelectors = new Set(); // Nouveaux sélecteurs
         this.needsFullRebuild = false;
+
+        // Clé de stockage pour le cache CSS
+        this.STORAGE_KEY = "marssel_styles_cache";
+        this.STORAGE_VERSION = "0.9.7"; // ✅ Synchronisé avec package.json
+
+        // Sélecteurs critiques
+        this.criticalsSelectors = marssel.constructor.CRITICAL_SELECTORS || [];
+
+        this.loadedClasses = new Set(); // Track les classes chargées
     }
 
     // === INITIALISATION ===
@@ -52,7 +62,7 @@ export class StyleManager {
                 this.addDeclarationWithImportance(
                     declarations,
                     `--icon-size: ${size}`,
-                    parsed.isImportant
+                    parsed.isImportant,
                 );
             },
 
@@ -60,21 +70,21 @@ export class StyleManager {
                 const iconDeclarations =
                     this.marssel.iconManager.createIconStyles(
                         selector,
-                        parsed.finalClassName
+                        parsed.finalClassName,
                     );
                 if (iconDeclarations?.size > 0) {
                     iconDeclarations.forEach((decl) => {
                         this.addDeclarationWithImportance(
                             declarations,
                             decl,
-                            parsed.isImportant
+                            parsed.isImportant,
                         );
                     });
                 }
             },
 
             font: (value, declarations, selector, parsed) => {
-                const match = value.match(/^(.*?)(?:\[(\d*)(?:_(.*?))?\])?$/);
+                const match = value.match(/^(.*?)(?:\((\d*)(?:_(.*?))?\))?$/);
                 if (!match) return;
 
                 const fontFamily = match[1].replace(/_/g, " ");
@@ -87,17 +97,17 @@ export class StyleManager {
                 this.addDeclarationWithImportance(
                     declarations,
                     `font-family: '${fontFamily}', sans-serif`,
-                    parsed.isImportant
+                    parsed.isImportant,
                 );
                 this.addDeclarationWithImportance(
                     declarations,
                     `font-weight: ${fontWeight}`,
-                    parsed.isImportant
+                    parsed.isImportant,
                 );
                 this.addDeclarationWithImportance(
                     declarations,
                     `font-style: ${fontStyle}`,
-                    parsed.isImportant
+                    parsed.isImportant,
                 );
             },
 
@@ -105,7 +115,7 @@ export class StyleManager {
                 this.addDeclarationWithImportance(
                     declarations,
                     `transform: ${cleanValue(value)}`,
-                    parsed.isImportant
+                    parsed.isImportant,
                 );
             },
 
@@ -123,31 +133,31 @@ export class StyleManager {
                 this.addDeclarationWithImportance(
                     declarations,
                     `content: "${cleanValue(value.replace(/_/g, " "))}"`,
-                    parsed.isImportant
+                    parsed.isImportant,
                 );
             },
 
             "bg-linear": (value, declarations, selector, parsed) => {
                 // MODIFICATION : Ajouter .replace(/_/g, " ")
                 const processedValue = processGradientColors(
-                    value.replace(/_/g, " ")
+                    value.replace(/_/g, " "),
                 );
                 this.addDeclarationWithImportance(
                     declarations,
                     `background: linear-gradient(${processedValue})`,
-                    parsed.isImportant
+                    parsed.isImportant,
                 );
             },
 
             "bg-radial": (value, declarations, selector, parsed) => {
                 // MODIFICATION : Ajouter .replace(/_/g, " ")
                 const processedValue = processGradientColors(
-                    value.replace(/_/g, " ")
+                    value.replace(/_/g, " "),
                 );
                 this.addDeclarationWithImportance(
                     declarations,
                     `background: radial-gradient(${processedValue})`,
-                    parsed.isImportant
+                    parsed.isImportant,
                 );
             },
 
@@ -156,7 +166,7 @@ export class StyleManager {
                 this.addDeclarationWithImportance(
                     declarations,
                     `color: rgb(${rgbValue})`,
-                    parsed.isImportant
+                    parsed.isImportant,
                 );
             },
 
@@ -165,7 +175,7 @@ export class StyleManager {
                 this.addDeclarationWithImportance(
                     declarations,
                     `color: rgba(${rgbaValue})`,
-                    parsed.isImportant
+                    parsed.isImportant,
                 );
             },
 
@@ -174,7 +184,7 @@ export class StyleManager {
                 this.addDeclarationWithImportance(
                     declarations,
                     `background-color: rgb(${rgbValue})`,
-                    parsed.isImportant
+                    parsed.isImportant,
                 );
             },
 
@@ -183,7 +193,7 @@ export class StyleManager {
                 this.addDeclarationWithImportance(
                     declarations,
                     `background-color: rgba(${rgbaValue})`,
-                    parsed.isImportant
+                    parsed.isImportant,
                 );
             },
 
@@ -191,7 +201,7 @@ export class StyleManager {
                 this.addDeclarationWithImportance(
                     declarations,
                     `transform: scale(${cleanValue(value)})`,
-                    parsed.isImportant
+                    parsed.isImportant,
                 );
             },
 
@@ -201,7 +211,7 @@ export class StyleManager {
                 this.addDeclarationWithImportance(
                     declarations,
                     `transform: rotate(${rotateValue}${unit})`,
-                    parsed.isImportant
+                    parsed.isImportant,
                 );
             },
 
@@ -209,7 +219,7 @@ export class StyleManager {
                 this.addDeclarationWithImportance(
                     declarations,
                     `transform: translate(${cleanValue(value)})`,
-                    parsed.isImportant
+                    parsed.isImportant,
                 );
             },
 
@@ -217,7 +227,7 @@ export class StyleManager {
                 this.addDeclarationWithImportance(
                     declarations,
                     `--progress-value: ${cleanValue(value)}`,
-                    parsed.isImportant
+                    parsed.isImportant,
                 );
             },
 
@@ -225,7 +235,7 @@ export class StyleManager {
                 this.addDeclarationWithImportance(
                     declarations,
                     `--progress-value: ${cleanValue(value)}`,
-                    parsed.isImportant
+                    parsed.isImportant,
                 );
             },
 
@@ -234,7 +244,7 @@ export class StyleManager {
                 this.addDeclarationWithImportance(
                     declarations,
                     `--progress-color: ${colorValue}`,
-                    parsed.isImportant
+                    parsed.isImportant,
                 );
             },
 
@@ -243,7 +253,7 @@ export class StyleManager {
                 this.addDeclarationWithImportance(
                     declarations,
                     `--progress-background-color: ${colorValue}`,
-                    parsed.isImportant
+                    parsed.isImportant,
                 );
             },
 
@@ -251,7 +261,7 @@ export class StyleManager {
                 this.addDeclarationWithImportance(
                     declarations,
                     `--progress-height: ${cleanValue(value)}`,
-                    parsed.isImportant
+                    parsed.isImportant,
                 );
             },
 
@@ -259,7 +269,7 @@ export class StyleManager {
                 this.addDeclarationWithImportance(
                     declarations,
                     `--progress-border-radius: ${cleanValue(value)}`,
-                    parsed.isImportant
+                    parsed.isImportant,
                 );
             },
             // AJOUTÉ : Handlers pour les animations
@@ -267,7 +277,7 @@ export class StyleManager {
                 this.marssel.animationManager.handleAnimationProperty(
                     value,
                     declarations,
-                    parsed
+                    parsed,
                 );
             },
 
@@ -275,7 +285,7 @@ export class StyleManager {
                 this.marssel.animationManager.handleAnimationProperty(
                     value,
                     declarations,
-                    parsed
+                    parsed,
                 );
             },
 
@@ -283,7 +293,7 @@ export class StyleManager {
                 this.marssel.animationManager.handleAnimationDuration(
                     value,
                     declarations,
-                    parsed
+                    parsed,
                 );
             },
 
@@ -291,7 +301,7 @@ export class StyleManager {
                 this.marssel.animationManager.handleAnimationTiming(
                     value,
                     declarations,
-                    parsed
+                    parsed,
                 );
             },
 
@@ -299,7 +309,7 @@ export class StyleManager {
                 this.marssel.animationManager.handleAnimationDelay(
                     value,
                     declarations,
-                    parsed
+                    parsed,
                 );
             },
 
@@ -307,7 +317,7 @@ export class StyleManager {
                 this.marssel.animationManager.handleAnimationIteration(
                     value,
                     declarations,
-                    parsed
+                    parsed,
                 );
             },
 
@@ -315,7 +325,7 @@ export class StyleManager {
                 this.marssel.animationManager.handleAnimationDirection(
                     value,
                     declarations,
-                    parsed
+                    parsed,
                 );
             },
 
@@ -323,7 +333,7 @@ export class StyleManager {
                 this.marssel.animationManager.handleAnimationFillMode(
                     value,
                     declarations,
-                    parsed
+                    parsed,
                 );
             },
         };
@@ -378,7 +388,7 @@ export class StyleManager {
 
         this.lazyObserver = new IntersectionObserver(
             this.handleIntersection.bind(this),
-            { rootMargin: "2000px", threshold: [0, 0.1] }
+            { rootMargin: "2000px", threshold: [0, 0.1] },
         );
 
         this.addEventListeners();
@@ -490,7 +500,7 @@ export class StyleManager {
         if (!this.lazyload || !window.location.hash) return;
 
         const targetElement = document.getElementById(
-            window.location.hash.substring(1)
+            window.location.hash.substring(1),
         );
         if (targetElement) {
             this.processElementsAroundTarget(targetElement);
@@ -518,7 +528,7 @@ export class StyleManager {
             lastScrollTop = currentScrollTop;
             scrollTimeout = setTimeout(
                 () => this.processVisibleElements(),
-                200
+                200,
             );
         };
     }
@@ -644,6 +654,8 @@ export class StyleManager {
     initializeStyleSheet() {
         this.ensureStyleElement();
 
+        this.loadCachedStyles();
+
         const processAndUpdate = () => {
             // Traiter d'abord les éléments critiques
             this.processCriticalElements();
@@ -689,8 +701,16 @@ export class StyleManager {
         criticalElements.forEach((element) => {
             if (!(element instanceof HTMLElement)) return;
 
-            // Traiter l'élément sans condition
+            // Traiter l'élément
             this.marssel.domManager.processElement(element);
+
+            // AJOUT : Traiter TOUS les enfants des éléments critiques
+            const allChildren = element.querySelectorAll("*");
+            allChildren.forEach((child) => {
+                if (child instanceof HTMLElement) {
+                    this.marssel.domManager.processElement(child);
+                }
+            });
 
             // Retirer du lazy loading
             if (this.lazyElements.has(element)) {
@@ -779,10 +799,10 @@ export class StyleManager {
         if (elementsToProcess.length > 0) {
             // Séparer les éléments critiques des autres
             const criticalToProcess = elementsToProcess.filter(
-                (item) => item.isCritical
+                (item) => item.isCritical,
             );
             const regularToProcess = elementsToProcess.filter(
-                (item) => !item.isCritical
+                (item) => !item.isCritical,
             );
 
             // Traiter d'abord les éléments critiques
@@ -808,13 +828,20 @@ export class StyleManager {
     getCriticalElements() {
         const criticalElements = [];
 
-        // Utiliser les sélecteurs du DomManager
-        this.marssel.constructor.CRITICAL_SELECTORS.forEach((selector) => {
+        this.criticalsSelectors.forEach((selector) => {
             try {
                 const elements = document.querySelectorAll(selector);
                 criticalElements.push(...elements);
             } catch (e) {
-                console.warn(`Sélecteur invalide: ${selector}`, e);
+                // Ignorer les erreurs de sélecteur
+            }
+        });
+
+        // AJOUT : Inclure tous les éléments avec .no-lazy
+        const noLazyElements = document.querySelectorAll(".no-lazy");
+        noLazyElements.forEach((el) => {
+            if (!criticalElements.includes(el)) {
+                criticalElements.push(el);
             }
         });
 
@@ -866,6 +893,189 @@ export class StyleManager {
         this.fontFaces.add(cssText);
     }
 
+    loadCachedStyles() {
+        try {
+            const cached = sessionStorage.getItem(this.STORAGE_KEY);
+            if (!cached) return;
+
+            const { version, htmlHash, css, selectorMap, loadedClasses } =
+                JSON.parse(cached);
+
+            // Vérifier la version
+            if (version !== this.STORAGE_VERSION) {
+                sessionStorage.removeItem(this.STORAGE_KEY);
+                return;
+            }
+
+            // ✅ NOUVEAU : Vérifier si le HTML a changé
+            const currentHash = this.getHTMLHash();
+            if (htmlHash && htmlHash !== currentHash) {
+                console.log("🔄 HTML modifié, cache invalidé");
+                sessionStorage.removeItem(this.STORAGE_KEY);
+                return;
+            }
+
+            // Restaurer les classes chargées
+            if (loadedClasses && Array.isArray(loadedClasses)) {
+                loadedClasses.forEach((className) => {
+                    this.loadedClasses.add(className);
+                    this.marssel.domManager.processedClasses.add(className);
+                });
+            }
+
+            // Restaurer la map des sélecteurs avec nettoyage
+            if (selectorMap) {
+                Object.entries(selectorMap).forEach(([key, value]) => {
+                    if (key.startsWith("@media")) {
+                        if (!this.selectorDeclarations.has(key)) {
+                            this.selectorDeclarations.set(key, new Map());
+                        }
+                        const mediaMap = this.selectorDeclarations.get(key);
+
+                        Object.entries(value).forEach(
+                            ([selector, declarations]) => {
+                                const cleanedDeclarations =
+                                    this.cleanConflictingDeclarations(
+                                        mediaMap.get(selector),
+                                        new Set(declarations),
+                                    );
+                                mediaMap.set(selector, cleanedDeclarations);
+                            },
+                        );
+                    } else {
+                        const existingDeclarations =
+                            this.selectorDeclarations.get(key);
+                        const newDeclarations = new Set(value);
+                        const cleanedDeclarations =
+                            this.cleanConflictingDeclarations(
+                                existingDeclarations,
+                                newDeclarations,
+                            );
+                        this.selectorDeclarations.set(key, cleanedDeclarations);
+                    }
+                });
+            }
+
+            const classCount = loadedClasses ? loadedClasses.length : 0;
+            console.log(
+                `✅ Cache chargé: ${classCount} classes, regénération du CSS propre...`,
+            );
+
+            // Regénérer le CSS propre
+            this.updateStyles();
+        } catch (error) {
+            console.warn("Erreur chargement cache styles:", error);
+            sessionStorage.removeItem(this.STORAGE_KEY);
+        }
+    }
+
+    /**
+     * Nettoie les déclarations en conflit (même propriété, valeur différente)
+     * @param {Set|undefined} existingDeclarations - Déclarations existantes
+     * @param {Set} newDeclarations - Nouvelles déclarations du cache
+     * @returns {Set} - Déclarations nettoyées
+     */
+    cleanConflictingDeclarations(existingDeclarations, newDeclarations) {
+        // Si pas de déclarations existantes, retourner les nouvelles
+        if (!existingDeclarations) {
+            return newDeclarations;
+        }
+
+        // Extraire les propriétés des nouvelles déclarations
+        const newProperties = new Set();
+        newDeclarations.forEach((decl) => {
+            const property = decl.split(":")[0].trim();
+            newProperties.add(property);
+        });
+
+        // Filtrer les anciennes déclarations qui ont la même propriété
+        const filteredExisting = new Set();
+        existingDeclarations.forEach((decl) => {
+            const property = decl.split(":")[0].trim();
+            // Garder seulement si la propriété n'est pas dans les nouvelles
+            if (!newProperties.has(property)) {
+                filteredExisting.add(decl);
+            }
+        });
+
+        // Fusionner : anciennes (filtrées) + nouvelles
+        return new Set([...filteredExisting, ...newDeclarations]);
+    }
+
+    /**
+     * Génère un hash simple d'une chaîne
+     * Utilisé pour détecter les changements de HTML
+     */
+    simpleHash(str) {
+        let hash = 0;
+        for (let i = 0; i < Math.min(str.length, 10000); i++) {
+            const char = str.charCodeAt(i);
+            hash = (hash << 5) - hash + char;
+            hash = hash & hash; // Convert to 32bit integer
+        }
+        return hash.toString(36);
+    }
+
+    /**
+     * Génère un hash du HTML des éléments avec classes Marssel
+     */
+    getHTMLHash() {
+        // Ne hasher que les éléments avec des classes (pour la performance)
+        const elements = document.querySelectorAll("[class]");
+        const classesString = Array.from(elements)
+            .map((el) => el.className)
+            .join("|");
+        return this.simpleHash(classesString);
+    }
+
+    saveCachedStyles() {
+        try {
+            const styleElement = document.getElementById("marssel-styles");
+            if (!styleElement) {
+                console.warn("❌ Élément marssel-styles introuvable");
+                return;
+            }
+
+            // Convertir la Map en objet sérialisable
+            const selectorMap = {};
+            this.selectorDeclarations.forEach((value, key) => {
+                if (value instanceof Map) {
+                    // Media query
+                    const mediaSelectors = {};
+                    value.forEach((decls, selector) => {
+                        mediaSelectors[selector] = Array.from(decls);
+                    });
+                    selectorMap[key] = mediaSelectors;
+                } else {
+                    // Sélecteur normal
+                    selectorMap[key] = Array.from(value);
+                }
+            });
+
+            const css = styleElement.textContent || "";
+            const maxClasses = 1000;
+            const loadedClassesArray = Array.from(this.loadedClasses);
+
+            // ✅ NOUVEAU : Sauvegarder aussi les classes chargées
+            const cache = {
+                version: this.STORAGE_VERSION,
+                htmlHash: this.getHTMLHash(), // Hash des classes du DOM
+                css: css,
+                selectorMap: selectorMap,
+                loadedClasses: loadedClassesArray.slice(-maxClasses),
+                timestamp: Date.now(),
+            };
+
+            sessionStorage.setItem(this.STORAGE_KEY, JSON.stringify(cache));
+
+            console.log(
+                `💾 Cache sauvegardé: ${css.length} chars CSS, ${this.loadedClasses.size} classes`,
+            );
+        } catch (error) {
+            console.warn("❌ Erreur sauvegarde cache:", error);
+        }
+    }
+
     updateStyles() {
         if (this.updateScheduled) return;
 
@@ -884,6 +1094,9 @@ export class StyleManager {
             ];
 
             styleElement.textContent = cssChunks.join("\n");
+
+            // ✅ CORRECTION : Sauvegarder APRÈS que le CSS soit généré
+            this.saveCachedStyles();
         });
     }
 
@@ -901,7 +1114,7 @@ export class StyleManager {
         this.selectorDeclarations.forEach((declarations, selector) => {
             if (!selector.startsWith("@media")) {
                 rules.push(
-                    `${selector} { ${Array.from(declarations).join("; ")} }`
+                    `${selector} { ${Array.from(declarations).join("; ")} }`,
                 );
             }
         });
@@ -915,7 +1128,7 @@ export class StyleManager {
                 const mediaQueryRules = [];
                 mediaQuerySelectors.forEach((declarations, selector) => {
                     mediaQueryRules.push(
-                        `${selector} { ${Array.from(declarations).join("; ")} }`
+                        `${selector} { ${Array.from(declarations).join("; ")} }`,
                     );
                 });
                 rules.push(`${mediaQuery} { ${mediaQueryRules.join(" ")} }`);
@@ -936,7 +1149,7 @@ export class StyleManager {
             this.addDeclarationsWithMediaQuery(
                 [],
                 selector,
-                boxSizingDeclarations
+                boxSizingDeclarations,
             );
         });
 
@@ -977,7 +1190,7 @@ export class StyleManager {
             this.addDeclarationsWithMediaQuery(
                 parsed.breakpoints,
                 selector,
-                declarations
+                declarations,
             );
         }
 
@@ -1010,7 +1223,7 @@ export class StyleManager {
     handleIcon(selector, parsed, declarations) {
         const iconDeclarations = this.marssel.iconManager.createIconStyles(
             selector,
-            parsed.finalClassName
+            parsed.finalClassName,
         );
         if (iconDeclarations?.size > 0) {
             iconDeclarations.forEach((decl) => declarations.add(decl));
@@ -1044,7 +1257,7 @@ export class StyleManager {
             direction,
             gutterValue,
             "margin",
-            parsed.isImportant
+            parsed.isImportant,
         );
 
         const childSelector = `${selector} > [class*="col-"]`;
@@ -1054,13 +1267,13 @@ export class StyleManager {
             direction,
             gutterValue,
             "padding",
-            parsed.isImportant
+            parsed.isImportant,
         );
 
         this.addDeclarationsWithMediaQuery(
             parsed.breakpoints,
             childSelector,
-            childDeclarations
+            childDeclarations,
         );
     }
 
@@ -1069,7 +1282,7 @@ export class StyleManager {
         direction,
         gutterValue,
         type,
-        isImportant = false
+        isImportant = false,
     ) {
         const prefix = type === "margin" ? "-" : "";
         const directions = {
@@ -1119,7 +1332,7 @@ export class StyleManager {
                         .get(mediaQueryKey)
                         .get(selector)
                         .add(`max-width: ${width}`);
-                }
+                },
             );
         }
     }
@@ -1137,7 +1350,7 @@ export class StyleManager {
         this.addDeclarationsWithMediaQuery(
             parsed.breakpoints,
             `${selector} > *`,
-            childDeclarations
+            childDeclarations,
         );
     }
 
@@ -1170,7 +1383,7 @@ export class StyleManager {
             const functionName = property.endsWith("-rgb") ? "rgb" : "rgba";
 
             let declaration = `${cssProperty}: ${functionName}(${cleanValue(
-                value
+                value,
             )})`;
 
             if (isImportant && !declaration.includes("!important")) {
@@ -1207,7 +1420,9 @@ export class StyleManager {
 
         if (!this.marssel.constructor.properties[property]) {
             const formattedProperty = property.replace(/_/g, "-");
-            let declaration = `${formattedProperty}: ${cleanValue(value)}`;
+            // ✅ FIX: Ajouter addHashToHex pour traiter les couleurs hex dans toutes les valeurs
+            const processedValue = addHashToHex(cleanValue(value));
+            let declaration = `${formattedProperty}: ${processedValue}`;
             if (isImportant && !declaration.includes("!important")) {
                 declaration += " !important";
             }
@@ -1218,6 +1433,9 @@ export class StyleManager {
 
             if (this.isColorProperty(property)) {
                 cssValue = this.marssel.domManager.processColor(cssValue);
+            } else {
+                // ✅ FIX: Traiter les hex même pour les propriétés non-couleur (border, outline, etc.)
+                cssValue = addHashToHex(cssValue);
             }
 
             if (Array.isArray(cssProperty)) {

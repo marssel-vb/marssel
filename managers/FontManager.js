@@ -66,7 +66,7 @@ export class FontManager {
 
             if (!response.ok) {
                 throw new Error(
-                    `HTTP ${response.status}: ${response.statusText}`
+                    `HTTP ${response.status}: ${response.statusText}`,
                 );
             }
 
@@ -87,7 +87,7 @@ export class FontManager {
                 this.state.manifest = JSON.parse(responseText);
                 console.log(
                     "✅ JSON parsed successfully:",
-                    this.state.manifest
+                    this.state.manifest,
                 );
             } catch (jsonError) {
                 console.error("❌ JSON parsing failed:", jsonError);
@@ -106,7 +106,7 @@ export class FontManager {
                     `🔄 Manifest load attempt ${
                         retryCount + 1
                     } failed, retrying...`,
-                    error.message
+                    error.message,
                 );
                 await this.delay(this.config.retryDelay * (retryCount + 1));
                 return this.loadManifest(retryCount + 1);
@@ -114,7 +114,7 @@ export class FontManager {
 
             console.warn(
                 "💀 Font manifest loading failed after all retries:",
-                error
+                error,
             );
             // Utiliser un manifest vide au lieu de faire planter l'app
             this.state.manifest = {};
@@ -152,7 +152,7 @@ export class FontManager {
             if (this.hasLocalFont(normalizedFamily, normalizedVariant)) {
                 return this.injectLocalFont(
                     normalizedFamily,
-                    normalizedVariant
+                    normalizedVariant,
                 );
             } else {
                 return this.loadGoogleFont(normalizedFamily, normalizedVariant);
@@ -168,11 +168,19 @@ export class FontManager {
         return fontFamily.trim().replace(/["']/g, "");
     }
 
+    // normalizeVariant(variant) {
+    //     if (typeof variant === "number") {
+    //         return variant.toString();
+    //     }
+    //     return variant.toString().trim();
+    // }
+
     normalizeVariant(variant) {
-        if (typeof variant === "number") {
-            return variant.toString();
-        }
-        return variant.toString().trim();
+        if (!variant) return "400";
+
+        // Nettoie les espaces ET supprime les parenthèses ( )
+        // Cela transforme "(700)" en "700"
+        return variant.toString().trim().replace(/[()]/g, "");
     }
 
     hasLocalFont(fontFamily, variant) {
@@ -185,7 +193,7 @@ export class FontManager {
 
             if (!fontData.formats || !Array.isArray(fontData.formats)) {
                 throw new Error(
-                    `Invalid font data for ${fontFamily}-${variant}`
+                    `Invalid font data for ${fontFamily}-${variant}`,
                 );
             }
 
@@ -197,7 +205,7 @@ export class FontManager {
         } catch (error) {
             console.error(
                 `Failed to inject local font ${fontFamily}-${variant}:`,
-                error
+                error,
             );
             return false;
         }
@@ -251,7 +259,7 @@ export class FontManager {
         } catch (error) {
             console.error(
                 `Failed to load Google font ${family}-${variant}:`,
-                error
+                error,
             );
             return false;
         }
@@ -288,7 +296,7 @@ export class FontManager {
 
         this.state.googleTimer = setTimeout(
             this.flushGoogleFonts,
-            this.config.googleTimeout
+            this.config.googleTimeout,
         );
     }
 
@@ -318,7 +326,7 @@ export class FontManager {
                 ([family, variants]) =>
                     `${family}:ital,wght@${Array.from(variants)
                         .sort()
-                        .join(";")}`
+                        .join(";")}`,
             )
             .join("&family=");
 
@@ -329,7 +337,7 @@ export class FontManager {
         return (
             this.state.loadedStylesheets.has(url) ||
             Array.from(
-                document.head.querySelectorAll("link[rel='stylesheet']")
+                document.head.querySelectorAll("link[rel='stylesheet']"),
             ).some((link) => link.href === url)
         );
     }
@@ -369,7 +377,7 @@ export class FontManager {
     // Public API methods
     isLoaded(fontFamily, variant = "400") {
         const fontKey = `${this.normalizeFontFamily(
-            fontFamily
+            fontFamily,
         )}-${this.normalizeVariant(variant)}`;
         return this.state.loaded.has(fontKey);
     }

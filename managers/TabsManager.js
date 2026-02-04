@@ -47,7 +47,7 @@ export class TabsManager {
      */
     initializeAllTabs() {
         const tabContainers = document.querySelectorAll(
-            "[data-tabs], .tabs-container"
+            "[data-tabs], .tabs-container",
         );
 
         let count = 0;
@@ -80,7 +80,7 @@ export class TabsManager {
 
         // Trouver les radios
         const allRadios = container.querySelectorAll(
-            'input[type="radio"][name]'
+            'input[type="radio"][name]',
         );
 
         if (allRadios.length === 0) {
@@ -92,7 +92,7 @@ export class TabsManager {
         // (Empêche les onglets imbriqués d'être comptés dans le parent)
         const groupName = allRadios[0].name;
         const radios = Array.from(allRadios).filter(
-            (r) => r.name === groupName
+            (r) => r.name === groupName,
         );
 
         // Parser la configuration
@@ -141,22 +141,22 @@ export class TabsManager {
     buildTabsArray(container, radios) {
         // FIX 1: Utiliser [class*="..."] pour trouver le wrapper, même avec des modificateurs
         const contentWrapper = container.querySelector(
-            '[class*="tabs-content"]'
+            '[class*="tabs-content"]',
         );
 
         if (!contentWrapper) {
             console.warn(
                 `⚠️ Aucun wrapper ".tabs-content" trouvé dans`,
-                container
+                container,
             );
             // Retourner une map avec des panels null pour éviter d'autres erreurs
             return Array.from(radios).map((radio, index) => {
                 const label = container.querySelector(
-                    `label[for="${radio.id}"]`
+                    `label[for="${radio.id}"]`,
                 );
                 if (!label) {
                     console.warn(
-                        `⚠️ Aucun label trouvé pour l'input #${radio.id}`
+                        `⚠️ Aucun label trouvé pour l'input #${radio.id}`,
                     );
                 }
                 return { radio, label, panel: null, index, id: radio.id };
@@ -165,7 +165,7 @@ export class TabsManager {
 
         // FIX 2: Utiliser startsWith("tab-panel") pour trouver les panels, même avec des modificateurs
         const panels = Array.from(contentWrapper.children).filter((child) =>
-            Array.from(child.classList).some((c) => c.startsWith("tab-panel"))
+            Array.from(child.classList).some((c) => c.startsWith("tab-panel")),
         );
 
         return Array.from(radios).map((radio, index) => {
@@ -181,7 +181,7 @@ export class TabsManager {
                 console.warn(
                     `⚠️ Aucun panel trouvé à l'index ${index} pour le groupe ${
                         container.dataset.tabs || container.id
-                    }`
+                    }`,
                 );
             }
 
@@ -350,13 +350,13 @@ export class TabsManager {
             if (tab.label) {
                 tab.label.setAttribute(
                     "aria-selected",
-                    tab === activeTab ? "true" : "false"
+                    tab === activeTab ? "true" : "false",
                 );
             }
             if (tab.panel) {
                 tab.panel.setAttribute(
                     "aria-hidden",
-                    tab === activeTab ? "false" : "true"
+                    tab === activeTab ? "false" : "true",
                 );
             }
         });
@@ -403,7 +403,7 @@ export class TabsManager {
                         // Chercher des containers de tabs dans les enfants
                         if (node.querySelectorAll) {
                             const containers = node.querySelectorAll(
-                                "[data-tabs], .tabs-container"
+                                "[data-tabs], .tabs-container",
                             );
                             containers.forEach((container) => {
                                 this.initializeTabGroup(container);
@@ -444,7 +444,7 @@ export class TabsManager {
 
         if (!group.tabs[index]) {
             console.warn(
-                `⚠️ Onglet à l'index ${index} introuvable dans "${groupId}"`
+                `⚠️ Onglet à l'index ${index} introuvable dans "${groupId}"`,
             );
             return false;
         }
@@ -504,9 +504,17 @@ export class TabsManager {
         if (!group) return false;
 
         const currentIndex = this.getActiveIndex(groupId);
-        const nextIndex = (currentIndex + 1) % group.tabs.length;
+        const len = group.tabs.length;
 
-        return this.activateTab(groupId, nextIndex);
+        // Chercher le prochain onglet non désactivé
+        for (let i = 1; i <= len; i++) {
+            const nextIndex = (currentIndex + i) % len;
+            if (!group.tabs[nextIndex].radio?.disabled) {
+                return this.activateTab(groupId, nextIndex);
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -517,10 +525,17 @@ export class TabsManager {
         if (!group) return false;
 
         const currentIndex = this.getActiveIndex(groupId);
-        const prevIndex =
-            (currentIndex - 1 + group.tabs.length) % group.tabs.length;
+        const len = group.tabs.length;
 
-        return this.activateTab(groupId, prevIndex);
+        // Chercher l'onglet précédent non désactivé
+        for (let i = 1; i <= len; i++) {
+            const prevIndex = (currentIndex - i + len) % len;
+            if (!group.tabs[prevIndex].radio?.disabled) {
+                return this.activateTab(groupId, prevIndex);
+            }
+        }
+
+        return false;
     }
 
     /**

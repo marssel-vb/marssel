@@ -87,7 +87,7 @@ export class HeaderManager {
             const isOutsideMobileMenu =
                 mobileMenu && !mobileMenu.contains(event.target);
             const isNotToggleButton = !event.target.closest(
-                '[data-toggle="menu"]'
+                '[data-toggle="menu"]',
             );
 
             if (isOutsideHeader || (isOutsideMobileMenu && isNotToggleButton)) {
@@ -151,7 +151,7 @@ export class HeaderManager {
 
     setupToggleButtons(headerElement, headerId) {
         const toggleButtons = headerElement.querySelectorAll(
-            '[data-toggle="menu"]'
+            '[data-toggle="menu"]',
         );
         toggleButtons.forEach((button) => {
             button.addEventListener("click", (event) => {
@@ -199,7 +199,7 @@ export class HeaderManager {
         closeButton.innerHTML = "&times;";
         closeButton.setAttribute("aria-label", "Close menu");
         closeButton.addEventListener("click", () =>
-            this.closeMobileMenu(headerId)
+            this.closeMobileMenu(headerId),
         );
         return closeButton;
     }
@@ -210,7 +210,7 @@ export class HeaderManager {
         const overlay = document.createElement("div");
         overlay.className = "menu-overlay";
         overlay.addEventListener("click", () =>
-            this.closeMobileMenu(headerElement.id)
+            this.closeMobileMenu(headerElement.id),
         );
         headerElement.appendChild(overlay);
     }
@@ -461,7 +461,7 @@ export class HeaderManager {
         const { element, config } = header;
         const isMobileView = this.isMobileBreakpoint(
             this.currentBreakpoint,
-            config
+            config,
         );
         const toggleButton = element.querySelector(".menu-toggle");
 
@@ -556,7 +556,7 @@ export class HeaderManager {
 
         // Initialisation des dropdowns fullwidth
         const fullwidthDropdowns = mobileMenu.querySelectorAll(
-            ".dropdown-fullwidth"
+            ".dropdown-fullwidth",
         );
         fullwidthDropdowns.forEach((dropdown) => {
             this.dropdownManager.initializeFullwidthDropdown(dropdown);
@@ -573,7 +573,7 @@ export class HeaderManager {
     // Getters utilitaires
     get isAnyMenuOpen() {
         return Array.from(this.headers.values()).some(
-            (header) => header.isOpen
+            (header) => header.isOpen,
         );
     }
 
@@ -664,7 +664,7 @@ export class HeaderManager {
     // Méthode pour obtenir la largeur de conteneur appropriée pour le breakpoint actuel
     getCurrentContainerWidth() {
         const containerWidth = this.getContainerMaxWidth(
-            this.currentBreakpoint
+            this.currentBreakpoint,
         );
         return containerWidth || "100%";
     }
@@ -672,7 +672,7 @@ export class HeaderManager {
     // Méthode pour vérifier si nous sommes dans un breakpoint mobile
     isMobileBreakpoint(
         breakpoint = this.currentBreakpoint,
-        headerConfig = null
+        headerConfig = null,
     ) {
         if (!headerConfig) {
             const firstHeader = Array.from(this.headers.values())[0];
@@ -691,7 +691,7 @@ export class HeaderManager {
     // Méthode pour vérifier si nous sommes dans un breakpoint desktop
     isDesktopBreakpoint(
         breakpoint = this.currentBreakpoint,
-        headerConfig = null
+        headerConfig = null,
     ) {
         return !this.isMobileBreakpoint(breakpoint, headerConfig);
     }
@@ -700,7 +700,7 @@ export class HeaderManager {
     initializeElementVisibility(headerElement, config) {
         const isMobile = this.isMobileBreakpoint(
             this.currentBreakpoint,
-            config
+            config,
         );
         const toggleButton = headerElement.querySelector(".menu-toggle");
         const mobileMenu = headerElement.querySelector(".mobile-menu");

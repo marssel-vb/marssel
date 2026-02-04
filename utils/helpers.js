@@ -29,14 +29,28 @@ export const cleanValue = (value) => {
     // Convertir underscores en espaces D'ABORD
     let cleaned = value.replace(/_/g, " ");
 
-    // Ajout du # pour hex AVANT la transformation des thèmes
-    cleaned = addHashToHex(cleaned);
+    // ✅ CORRECTION : Utiliser (?:^|\s) et (?=\s|$) au lieu de \b
+    // Cela détecte mieux les hex après des mots comme "solid"
 
-    // Transformer les thèmes EN DERNIER (après addHashToHex)
+    // Optimisation de la regex dans cleanValue pour forcer les hex à 3/6 chiffres
+    cleaned = cleaned.replace(
+        /(?:^|\s)([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})(?=\s|$)/g,
+        (match, hex) => {
+            // Si c'est un nombre pur de 3 chiffres entre 100 et 900 (poids de police classique)
+            // on pourrait l'ignorer, MAIS dans une bordure, c'est une couleur.
+            // Forçons la couleur si ce n'est pas une unité connue.
+            if (!/^\d+$/.test(hex) || hex.length === 6 || hex[0] === hex[1]) {
+                return match.replace(hex, `#${hex.toUpperCase()}`);
+            }
+            return match;
+        },
+    );
+
+    // Transformer les thèmes EN DERNIER
     if (cleaned.includes("theme-") && !cleaned.includes("var(--theme-")) {
         cleaned = cleaned.replace(
             /\btheme-([a-zA-Z0-9-]+)\b/g,
-            "var(--theme-$1)"
+            "var(--theme-$1)",
         );
     }
 
@@ -62,50 +76,95 @@ export const addHashToHex = (value) => {
         return "";
     }
 
-    // Ne pas traiter si contient rgb/rgba
     if (/rgba?\(/.test(value)) {
         return value;
     }
 
-    // Split par espaces et virgules, en gardant les séparateurs
+    // Ne pas traiter les valeurs qui viennent de crochets CSS (ex: fw-[600])
+    if (value.match(/^\d{3}$/) && !value.match(/[a-fA-F]/)) {
+        return value;
+    }
+
+    // Split par espaces, virgules et parenthèses
     const parts = value.split(/(\s+|,)/);
 
     return parts
         .map((part) => {
-            // Ne rien faire avec les séparateurs
             if (/^\s*$|^,$/.test(part)) {
                 return part;
             }
 
             const trimmed = part.trim();
 
-            // CRITIQUE : Ne PAS convertir si contient une unité CSS
+            // 1. Ne PAS convertir si contient une unité CSS
             if (
                 /(\d+\.?\d*)(deg|turn|rad|grad|px|em|rem|%|vh|vw|vmin|vmax|ch|ex|ms|s)$/i.test(
-                    trimmed
+                    trimmed,
                 )
             ) {
                 return part;
             }
 
-            // Ne PAS convertir les nombres purs
-            if (/^\d+\.?\d*$/.test(trimmed)) {
+            // 2. Ne PAS convertir les nombres purs (ex: z-index, flex-grow)
+            // sauf s'ils ont exactement 3 ou 6 chiffres
+            if (
+                /^\d+$/.test(trimmed) &&
+                trimmed.length !== 3 &&
+                trimmed.length !== 6
+            ) {
                 return part;
             }
 
-            // Tester si c'est un hex valide (3 ou 6 caractères)
+            // Éviter les nombres décimaux (ex: 1.5)
+            if (trimmed.includes(".")) {
+                return part;
+            }
+
+            // 3. Tester si c'est un hex valide (3 ou 6 caractères)
             const hexMatch = trimmed.match(/^([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/);
             if (hexMatch) {
                 const hex = hexMatch[1];
-                const hasLetters = /[A-Fa-f]/i.test(hex);
-                const threeIdentical =
-                    hex.length === 3 &&
-                    hex[0].toLowerCase() === hex[1].toLowerCase() &&
-                    hex[1].toLowerCase() === hex[2].toLowerCase();
-                const isSixChars = hex.length === 6;
 
-                if (hasLetters || threeIdentical || isSixChars) {
-                    return part.replace(hex, `#${hex.toUpperCase()}`);
+                // ✅ REMPLACER TOUTE CETTE PARTIE PAR :
+                // On convertit SEULEMENT si :
+                // - contient des lettres (a-f) : fff, a1b, etc.
+                // - OU 3 chiffres identiques : 000, 111, 222, 333...999
+                // - OU 6 chiffres avec pattern de couleur (ex: 000000, 123123)
+
+                if (/[a-fA-F]/.test(hex)) {
+                    // Contient des lettres -> c'est une couleur
+                    return `#${hex.toUpperCase()}`;
+                }
+
+                if (hex.length === 3) {
+                    // On convertit en couleur si :
+                    // 1. Ça contient des lettres (a-f)
+                    // 2. OU c'est une valeur qu'on veut traiter comme couleur (ex: 222)
+                    // 3. OU (Astuce) si elle est précédée de "solid", "dashed", etc. dans la chaîne globale
+
+                    if (/[a-fA-F]/.test(hex)) {
+                        return `#${hex.toUpperCase()}`;
+                    }
+
+                    // Si on est dans un contexte de bordure (1px solid 222),
+                    // on devrait presque toujours ajouter le #
+                    return `#${hex.toUpperCase()}`;
+                }
+
+                if (hex.length === 6) {
+                    // Si c'est 6 caractères hexadécimaux, c'est presque toujours une couleur
+                    // (Peu de propriétés CSS utilisent des nombres purs à 6 chiffres sans unité)
+                    const isLikelyColor =
+                        /[a-fA-F]/.test(hex) ||
+                        hex.split("").every((c) => c === hex[0]);
+
+                    // On ajoute le # si contient une lettre (e2e8f0) ou si c'est 000000
+                    if (isLikelyColor) {
+                        return `#${hex.toUpperCase()}`;
+                    }
+
+                    // Optionnel : Forcer le # pour TOUT ce qui fait 6 caractères et qui n'a pas d'unité
+                    // return `#${hex.toUpperCase()}`;
                 }
             }
 
@@ -135,14 +194,14 @@ export const processGradientColors = (value) => {
             const placeholder = `__FUNC_${functions.length}__`;
             functions.push(match);
             return placeholder;
-        }
+        },
     );
 
     // 3. CORRECTIF : Transformer les thèmes (theme-xxx -> var(--theme-xxx))
     // On le fait sur la partie non protégée
     protectedValue = protectedValue.replace(
         /\btheme-([a-zA-Z0-9-]+)\b/g,
-        "var(--theme-$1)"
+        "var(--theme-$1)",
     );
 
     // 4. Traitement des couleurs Hexadécimales
@@ -163,7 +222,7 @@ export const processGradientColors = (value) => {
         // Ignorer unités CSS, "transparent" et nombres purs
         if (
             /(\d+\.?\d*)(deg|turn|rad|grad|px|em|rem|%|vh|vw|vmin|vmax)$/i.test(
-                trimmed
+                trimmed,
             ) ||
             trimmed === "transparent" ||
             /^\d+\.?\d*$/.test(trimmed)
@@ -210,18 +269,20 @@ export const escapeValue = (value) => {
         return "";
     }
 
-    return value
-        .replace(/\[/g, "\\[")
-        .replace(/\]/g, "\\]")
-        .replace(/\+/g, "\\+")
-        .replace(/:/g, "\\:")
-        .replace(/\(/g, "\\(")
-        .replace(/\)/g, "\\)")
-        .replace(/%/g, "\\%")
-        .replace(/,/g, "\\,")
-        .replace(/\./g, "\\.")
-        .replace(/\//g, "\\/")
-        .replace(/_/g, "\\_");
+    return (
+        value
+            .replace(/\[/g, "\\[")
+            .replace(/\]/g, "\\]")
+            .replace(/\+/g, "\\+")
+            .replace(/:/g, "\\:")
+            .replace(/\(/g, "\\(")
+            .replace(/\)/g, "\\)")
+            .replace(/%/g, "\\%")
+            .replace(/,/g, "\\,")
+            .replace(/\./g, "\\.")
+            //.replace(/\//g, "\\/")
+            .replace(/_/g, "\\_")
+    );
 };
 
 /**

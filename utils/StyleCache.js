@@ -5,7 +5,7 @@
 export class StyleCache {
     constructor(options = {}) {
         this.storageKey = options.storageKey || "marssel-style-cache";
-        this.version = options.version || "0.9.8";
+        this.version = options.version || "0.9.9";
         this.maxCacheSize = options.maxCacheSize || 5 * 1024 * 1024; // 5MB par défaut
         this.compressionEnabled = options.compression !== false;
         this.enabled = this.checkStorageAvailability();

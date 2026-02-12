@@ -2,7 +2,17 @@
 
 Ce document liste les changements notables, les correctifs et les nouvelles fonctionnalités introduites dans la librairie **marssel-npm**.
 
-## Version v0.9.9 - 05/02/2026 (Actuelle)
+## Version v0.10.0 - 13/02/2026 (Actuelle)
+
+### 🐛 Corrections de Bugs (Bug Fixes)
+
+- **Ajout de nouvelles icones** : Ajout de l'icone `share-network`.
+- **StyleManager** : Ajout d'un ordre des breakpoints `xxl` > `xl` > `lg` > `md` etc...
+- **Readme.md** : Amélioration du fichier.
+
+---
+
+## Version v0.9.9 - 05/02/2026
 
 ### ✨ Nouvelles Fonctionnalités (Features)
 

@@ -1102,9 +1102,9 @@ export class StyleManager {
 
     updateFullStyles(styleElement) {
         const css = [
-            ...this.fontFaces,
-            ...this.generateRegularRules(),
-            ...this.generateMediaQueryRules(),
+            ...this.fontFaces, // 1. Font faces
+            ...this.generateRegularRules(), // 2. Règles de base (sans media query)
+            ...this.generateMediaQueryRules(), // 3. Media queries (triées)
         ];
         styleElement.textContent = css.join("\n");
     }
@@ -1122,18 +1122,82 @@ export class StyleManager {
     }
 
     generateMediaQueryRules() {
+        // Définir l'ordre des breakpoints
+        const breakpointOrder = {
+            xs: 0,
+            sm: 1,
+            md: 2,
+            lg: 3,
+            xl: 4,
+            xxl: 5,
+        };
+
+        // Fonction pour extraire le type et la taille du breakpoint d'une media query
+        const parseMediaQuery = (mediaQueryKey) => {
+            // Exemples: "@media (min-width: 768px)" ou "@media (max-width: 991px)"
+            const minWidthMatch = mediaQueryKey.match(/min-width:\s*(\d+)px/);
+            const maxWidthMatch = mediaQueryKey.match(/max-width:\s*(\d+)px/);
+
+            if (minWidthMatch) {
+                return { type: "min", value: parseInt(minWidthMatch[1]) };
+            }
+            if (maxWidthMatch) {
+                return { type: "max", value: parseInt(maxWidthMatch[1]) };
+            }
+            return { type: "none", value: 0 };
+        };
+
         const rules = [];
-        this.selectorDeclarations.forEach((mediaQuerySelectors, mediaQuery) => {
-            if (mediaQuery.startsWith("@media")) {
-                const mediaQueryRules = [];
-                mediaQuerySelectors.forEach((declarations, selector) => {
-                    mediaQueryRules.push(
-                        `${selector} { ${Array.from(declarations).join("; ")} }`,
-                    );
-                });
-                rules.push(`${mediaQuery} { ${mediaQueryRules.join(" ")} }`);
+        const mediaQueries = [];
+
+        // Séparer les media queries des règles normales
+        this.selectorDeclarations.forEach((value, key) => {
+            if (key.startsWith("@media")) {
+                mediaQueries.push(key);
             }
         });
+
+        // Trier les media queries
+        mediaQueries.sort((a, b) => {
+            const parsedA = parseMediaQuery(a);
+            const parsedB = parseMediaQuery(b);
+
+            // min-width : du plus petit au plus grand
+            if (parsedA.type === "min" && parsedB.type === "min") {
+                return parsedA.value - parsedB.value;
+            }
+
+            // max-width : du plus grand au plus petit
+            if (parsedA.type === "max" && parsedB.type === "max") {
+                return parsedB.value - parsedA.value;
+            }
+
+            // min-width avant max-width
+            if (parsedA.type === "min" && parsedB.type === "max") {
+                return -1;
+            }
+            if (parsedA.type === "max" && parsedB.type === "min") {
+                return 1;
+            }
+
+            return 0;
+        });
+
+        // Générer les règles CSS dans l'ordre trié
+        mediaQueries.forEach((mediaQuery) => {
+            const mediaQuerySelectors =
+                this.selectorDeclarations.get(mediaQuery);
+            const mediaQueryRules = [];
+
+            mediaQuerySelectors.forEach((declarations, selector) => {
+                mediaQueryRules.push(
+                    `${selector} { ${Array.from(declarations).join("; ")} }`,
+                );
+            });
+
+            rules.push(`${mediaQuery} { ${mediaQueryRules.join(" ")} }`);
+        });
+
         return rules;
     }
 

@@ -428,15 +428,16 @@ export class HeaderManager {
         this.headers.forEach((header, id) => {
             this.adjustLayoutForBreakpoint(id);
 
+            const { element, config } = header;
+            const isDesktop = this.isDesktopBreakpoint(breakpoint, config);
+            const isMobile = this.isMobileBreakpoint(breakpoint, config);
+
             // Fermeture automatique des menus mobiles en mode desktop
             if (isDesktop && header.isOpen) {
                 this.closeMobileMenu(id);
             }
 
             // Gestion spécifique de la visibilité des éléments selon le type de menu
-            const { element, config } = header;
-            const isDesktop = this.isDesktopBreakpoint(breakpoint, config);
-            const isMobile = this.isMobileBreakpoint(breakpoint, config);
             const toggleButton = element.querySelector(".menu-toggle");
             const mobileMenu = element.querySelector(".mobile-menu");
 

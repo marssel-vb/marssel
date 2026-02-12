@@ -224,6 +224,7 @@ const ICONS_LIST = [
     "spinner",
     "spinner-ball",
     "gauge",
+    "share-network",
 ];
 
 // --- Déclarations pour le mode --onlynew ---

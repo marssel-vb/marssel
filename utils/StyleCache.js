@@ -2,10 +2,12 @@
  * StyleCache - Gestionnaire de cache persistant pour les styles Marssel
  * Permet de conserver les styles générés entre les navigations de pages
  */
+import { MARSSEL_VERSION } from "./version.js";
+
 export class StyleCache {
     constructor(options = {}) {
         this.storageKey = options.storageKey || "marssel-style-cache";
-        this.version = options.version || "0.9.9";
+        this.version = options.version || MARSSEL_VERSION;
         this.maxCacheSize = options.maxCacheSize || 5 * 1024 * 1024; // 5MB par défaut
         this.compressionEnabled = options.compression !== false;
         this.enabled = this.checkStorageAvailability();

@@ -1,3 +1,9 @@
+// # Commande de base
+// node node_modules/@marssel-vb/marssel/generators/generate-icons-manifest.mjs
+
+// # Avec options personnalisées
+// node node_modules/@marssel-vb/marssel/generators/generate-icons-manifest.mjs --icons public/images/icons --manifest public/js/icons-manifest.json --pretty
+
 // node generate-icons-manifest.js [--icons path] [--manifest path] [--pretty]
 
 import fs from "node:fs";
@@ -16,7 +22,7 @@ function findProjectRoot(startDir) {
     while (currentDir !== root) {
         if (
             rootMarkers.some((marker) =>
-                fs.existsSync(path.join(currentDir, marker))
+                fs.existsSync(path.join(currentDir, marker)),
             )
         ) {
             return currentDir;
@@ -66,11 +72,11 @@ function getConfig() {
     const config = {
         customIconsDir: path.resolve(
             projectRoot,
-            normalize(args.customIconsDir, defaults.customIconsDir)
+            normalize(args.customIconsDir, defaults.customIconsDir),
         ),
         manifestPath: path.resolve(
             projectRoot,
-            normalize(args.manifestPath, defaults.manifestPath)
+            normalize(args.manifestPath, defaults.manifestPath),
         ),
         pretty: args.pretty,
     };
@@ -112,8 +118,8 @@ function processIconDir(dir, type, manifest) {
             type === "solid"
                 ? `${base}-solid`
                 : type === "duotone"
-                ? `${base}-duotone`
-                : base;
+                  ? `${base}-duotone`
+                  : base;
         manifest[name] = {
             svg: extractSvg(path.join(dir, file)),
             type,
@@ -144,7 +150,7 @@ async function generateIconsManifest() {
 
         fs.writeFileSync(
             config.manifestPath,
-            JSON.stringify(manifest, null, config.pretty ? 2 : 0)
+            JSON.stringify(manifest, null, config.pretty ? 2 : 0),
         );
 
         console.log("\n✨ Manifest généré avec succès !");

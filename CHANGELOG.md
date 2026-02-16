@@ -2,7 +2,45 @@
 
 Ce document liste les changements notables, les correctifs et les nouvelles fonctionnalités introduites dans la librairie **marssel-npm**.
 
-## Version v0.10.0 - 13/02/2026 (Actuelle)
+## Version v0.10.1 - 17/02/2026 (Actuelle)
+
+### 🔄 Version Management
+
+Marssel uses a centralized version system. When updating the package version:
+
+1. Update `package.json` version
+2. Update `utils/version.js` with the same version
+
+This ensures cache invalidation works correctly across updates.
+
+### ✨ Nouvelles Fonctionnalités (Features)
+
+- **Configuration des chemins de manifests** : Ajout de l'option `paths` dans le constructeur Marssel permettant de personnaliser les chemins des fichiers manifest pour les fonts et icons.
+    ```javascript
+    const app = new Marssel({
+        paths: {
+            fontsManifest: "/custom/fonts-manifest.json",
+            iconsManifest: "/custom/icons-manifest.json",
+        },
+    });
+    ```
+- **Générateurs CLI améliorés** : Les générateurs `generate-fonts-manifest.mjs` et `generate-icons-manifest.mjs` supportent maintenant les options `--fonts`, `--icons`, `--manifest` et `--pretty` pour une personnalisation complète.
+
+### 🔨 Optimisation et Améliorations Internes
+
+- **FontManager** : Utilisation des chemins configurables via `this.marssel.config.paths.fontsManifest` au lieu du chemin hardcodé.
+- **IconManager** : Utilisation des chemins configurables via `this.marssel.config.paths.iconsManifest` au lieu du chemin hardcodé.
+- **Rétrocompatibilité** : Les chemins par défaut (`/js/fonts-manifest.json` et `/js/icons-manifest.json`) sont préservés si l'option `paths` n'est pas fournie.
+
+### 📚 Documentation
+
+- **Guide d'installation** : Ajout de la documentation complète sur la génération des manifests avec les commandes npm.
+- **Guide de configuration** : Nouvelle section expliquant l'utilisation de l'option `paths`.
+- **Section icons** : Mise à jour avec les commandes correctes depuis le package npm.
+
+---
+
+## Version v0.10.0 - 13/02/2026
 
 ### 🐛 Corrections de Bugs (Bug Fixes)
 
@@ -63,7 +101,7 @@ Ce document liste les changements notables, les correctifs et les nouvelles fonc
 
 ### 🐛 Corrections de Bugs (Bug Fixes)
 
-- **Génération d'icônes de base** : Création d'un générateur permettant de créer une base d'icônes dans un fichier json en récupérant les icônes de [phosp](https://phosphoricons.com/).
+- **Génération d'icônes de base** : Création d'un générateur permettant de créer une base d'icônes dans un fichier json en récupérant les icônes de [phosphor](https://phosphoricons.com/).
 - **Correctif `Helpers`** : Le caractère barre oblique (/) est désormais correctement échappé dans les noms de classes CSS générés à partir de valeurs de style, permettant l'utilisation de classes telles que `grid-column-[1/-1]`.
 - **Correctif `DomManager`** : Le caractère point (.) est maintenant correctement échappé dans les sélecteurs CSS générés (ex: pour les classes avec des décimales), prévenant les ruptures de sélecteur.
 
@@ -250,3 +288,18 @@ Ce document liste les changements notables, les correctifs et les nouvelles fonc
 - **Mise en place des Managers de base :** `Carousel`, `DOM`, `Dropdown`, `Font`, `Header`, `Modal`, `Offcanvas`, `Popover`, `Scrollspy`, `Style`, `Toast`, et `Tooltip`.
 
 ---
+
+## 📖 Convention de Versioning
+
+Marssel suit le [Semantic Versioning](https://semver.org/lang/fr/) :
+
+- **MAJOR** (X.0.0) : Changements incompatibles avec les versions précédentes
+- **MINOR** (0.X.0) : Ajout de fonctionnalités rétrocompatibles
+- **PATCH** (0.0.X) : Corrections de bugs rétrocompatibles
+
+---
+
+## 🔗 Liens utiles
+
+- [Documentation complète](https://marssel.dev/documentation)
+- [GitHub Repository](https://github.com/marssel-vb/marssel)

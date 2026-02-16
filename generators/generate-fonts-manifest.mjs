@@ -1,3 +1,10 @@
+// # Commande de base
+// node node_modules/@marssel-vb/marssel/generators/generate-fonts-manifest.mjs
+
+// # Avec options personnalisées
+// node node_modules/@marssel-vb/marssel/generators/generate-fonts-manifest.mjs --fonts public/fonts --manifest public/js/fonts-manifest.json --pretty
+
+//node generate-fonts-manifest.mjs
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -66,11 +73,11 @@ function resolveConfig() {
 
     const fontsDir = path.resolve(
         projectRoot,
-        args.fontsDir || DEFAULT_CONFIG.fontsDir
+        args.fontsDir || DEFAULT_CONFIG.fontsDir,
     );
     const manifestPath = path.resolve(
         projectRoot,
-        args.manifestPath || DEFAULT_CONFIG.manifestPath
+        args.manifestPath || DEFAULT_CONFIG.manifestPath,
     );
 
     return {
@@ -114,7 +121,7 @@ function detectWeightAndStyle(baseName, config) {
     let style = "normal";
 
     const foundWeight = Object.keys(config.weightMap).find((w) =>
-        lower.includes(w)
+        lower.includes(w),
     );
     if (foundWeight) {
         weight = config.weightMap[foundWeight];
@@ -147,7 +154,7 @@ function buildManifest(files, config) {
 
         const { family, weight, style, type, fullPath } = parseFont(
             fileInfo,
-            config
+            config,
         );
 
         if (!manifest[family]) manifest[family] = {};

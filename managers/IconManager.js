@@ -28,10 +28,11 @@ export class IconManager {
         if (this.isLoaded) return;
 
         try {
-            const response = await fetch("/js/icons-manifest.json");
+            const manifestPath = this.marssel.config.paths.iconsManifest;
+            const response = await fetch(manifestPath);
             if (!response.ok) {
                 throw new Error(
-                    `HTTP ${response.status}: ${response.statusText}`
+                    `HTTP ${response.status}: ${response.statusText}`,
                 );
             }
 
@@ -40,7 +41,7 @@ export class IconManager {
         } catch (error) {
             console.warn(
                 "Manifeste d'icônes non trouvé, utilisation des icônes par défaut",
-                error
+                error,
             );
             this.icons = new Map();
         } finally {

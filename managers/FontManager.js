@@ -1,5 +1,4 @@
 import { FontsConfig } from "../utils/config.mjs";
-import { LRUCache } from "../utils/LRUCache.js";
 
 export class FontManager {
     constructor(marssel) {
@@ -14,7 +13,7 @@ export class FontManager {
     initializeConfig() {
         return {
             fontsPath: FontsConfig.fontsPath,
-            manifestUrl: FontsConfig.manifestPath,
+            manifestUrl: this.marssel.config.paths.fontsManifest,
             googleTimeout: 50,
             googleFontsUrl: "https://fonts.googleapis.com/css2",
             maxRetries: 3,
@@ -26,10 +25,10 @@ export class FontManager {
         return {
             loaded: new Set(),
             manifest: null,
-            pendingRequests: new Map(), // ← GARDER Map (pas LRUCache)
+            pendingRequests: new Map(),
             googleTimer: null,
             manifestLoaded: false,
-            loadedStylesheets: new Set(), // ← Seulement celui-ci en LRUCache
+            loadedStylesheets: new Set(),
         };
     }
 

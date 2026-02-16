@@ -20,8 +20,16 @@ export class Marssel {
         theme = "auto",
         themes = {},
         components = {},
+        paths = {},
     } = {}) {
-        this.config = { lazyload, theme };
+        this.config = {
+            lazyload,
+            theme,
+            paths: {
+                fontsManifest: paths.fontsManifest || "/js/fonts-manifest.json",
+                iconsManifest: paths.iconsManifest || "/js/icons-manifest.json",
+            },
+        };
         this.allThemes = this.mergeThemes(defaultThemes || {}, themes);
         this.componentStyles = components;
 

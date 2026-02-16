@@ -9,6 +9,7 @@ import {
     parseRGBValue,
     parseRGBAValue,
 } from "../utils/parsed.js";
+import { MARSSEL_VERSION } from "../utils/version.js";
 
 export class StyleManager {
     constructor(marssel, config = {}) {
@@ -46,7 +47,7 @@ export class StyleManager {
 
         // Clé de stockage pour le cache CSS
         this.STORAGE_KEY = "marssel_styles_cache";
-        this.STORAGE_VERSION = "0.9.9"; // ✅ Synchronisé avec package.json
+        this.STORAGE_VERSION = MARSSEL_VERSION; // ✅ Synchronisé avec package.json
 
         // Sélecteurs critiques
         this.criticalsSelectors = marssel.constructor.CRITICAL_SELECTORS || [];

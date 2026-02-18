@@ -2,16 +2,22 @@
 
 Ce document liste les changements notables, les correctifs et les nouvelles fonctionnalités introduites dans la librairie **marssel-npm**.
 
+## Version v0.10.2 - 18/02/2026 (Actuelle)
+
+### 🐛 Corrections de Bugs (Bug Fixes)
+
+- **Readme.md** : Amélioration du fichier.
+
 ## Version v0.10.1 - 17/02/2026 (Actuelle)
 
-### 🔄 Version Management
+### 🔄 Gestion des versions
 
-Marssel uses a centralized version system. When updating the package version:
+Marssel utilise un système de version centralisé. Lors de la mise à jour de la version du paquet :
 
-1. Update `package.json` version
-2. Update `utils/version.js` with the same version
+1. Mettez à jour la version dans le fichier package.json.
+2. Mettez à jour le fichier utils/version.js avec la même version.
 
-This ensures cache invalidation works correctly across updates.
+Cela garantit que l'invalidation du cache fonctionne correctement lors des mises à jour.
 
 ### ✨ Nouvelles Fonctionnalités (Features)
 

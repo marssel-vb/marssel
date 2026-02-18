@@ -21,7 +21,8 @@ yarn add @marssel-vb/marssel
 ### 1. Import et initialisation de base
 
 ```javascript
-import { Marssel } from "@marssel-vb/marssel";
+import { MarssellBundle } from "@marssel-vb/marssel";
+const { Marssel } = MarssellBundle;
 
 // Initialiser Marssel avec la configuration par défaut
 const app = new Marssel();
@@ -30,7 +31,8 @@ const app = new Marssel();
 ### 2. Avec options personnalisées
 
 ```javascript
-import { Marssel } from "@marssel-vb/marssel";
+import { MarssellBundle } from "@marssel-vb/marssel";
+const { Marssel } = MarssellBundle;
 
 const app = new Marssel({
     lazyload: true,

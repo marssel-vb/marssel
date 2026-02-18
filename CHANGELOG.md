@@ -8,7 +8,7 @@ Ce document liste les changements notables, les correctifs et les nouvelles fonc
 
 - **Readme.md** : Amélioration du fichier.
 
-## Version v0.10.1 - 17/02/2026 (Actuelle)
+## Version v0.10.1 - 17/02/2026
 
 ### 🔄 Gestion des versions
 

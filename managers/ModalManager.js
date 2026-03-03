@@ -4,8 +4,8 @@ export class ModalManager {
     constructor(marssel) {
         this.marssel = marssel;
         this.overlay = null;
-        this.openModals = new Set(); // Suivi des modales ouvertes
-        this.modalCache = new LRUCache(50); // Cache des éléments pour éviter les querySelector répétés
+        this.openModals = new Set();
+        this.modalCache = new LRUCache(50);
         this.boundCloseOnOverlay = this.closeAllModals.bind(this);
         this.boundCloseOnEscape = this.handleEscapeKey.bind(this);
     }
@@ -18,11 +18,9 @@ export class ModalManager {
             return;
         }
 
-        // Exposition des méthodes globales avec arrow functions pour préserver le contexte
         window.openModal = (id) => this.openModal(id);
         window.closeModal = (id) => this.closeModal(id);
 
-        // Événements avec gestion optimisée
         this.overlay.addEventListener("click", this.boundCloseOnOverlay, {
             passive: true,
         });
@@ -32,8 +30,8 @@ export class ModalManager {
     }
 
     /**
-     * Récupère un élément modal avec mise en cache
-     * @param {string} id - ID de la modale
+     * Retrieves a cached modal element
+     * @param {string} id - ID of the modal
      * @returns {HTMLElement|null}
      */
     getModalElement(id) {
@@ -48,9 +46,9 @@ export class ModalManager {
     }
 
     /**
-     * Ouvre une modale
-     * @param {string} id - ID de la modale à ouvrir
-     * @returns {boolean} - True si la modale a été ouverte avec succès
+     * Opens a modal
+     * @param {string} id - ID of the modal to open
+     * @returns {boolean} - True if the modal was opened successfully
      */
     openModal(id) {
         const modal = this.getModalElement(id);
@@ -60,12 +58,10 @@ export class ModalManager {
             return false;
         }
 
-        // Éviter d'ouvrir une modale déjà ouverte
         if (this.openModals.has(id)) {
             return true;
         }
 
-        // Gestion spéciale pour la modale fullscreen
         if (id !== "modal-fullscreen") {
             this.showOverlay();
         }
@@ -78,9 +74,9 @@ export class ModalManager {
     }
 
     /**
-     * Ferme une modale spécifique
-     * @param {string} id - ID de la modale à fermer
-     * @returns {boolean} - True si la modale a été fermée avec succès
+     * Closes a specific modal
+     * @param {string} id - ID of the modal to close
+     * @returns {boolean} - True if the modal was successfully closed
      */
     closeModal(id) {
         const modal = this.getModalElement(id);
@@ -92,7 +88,6 @@ export class ModalManager {
         this.hideModal(modal);
         this.openModals.delete(id);
 
-        // Si aucune modale n'est ouverte, nettoyer l'état
         if (this.openModals.size === 0) {
             this.hideOverlay();
             this.enableBodyScroll();
@@ -102,10 +97,9 @@ export class ModalManager {
     }
 
     /**
-     * Ferme toutes les modales ouvertes
+     * Close all open modals
      */
     closeAllModals() {
-        // Créer une copie du Set pour éviter les modifications pendant l'itération
         const modalsToClose = [...this.openModals];
 
         modalsToClose.forEach((id) => {
@@ -121,7 +115,7 @@ export class ModalManager {
     }
 
     /**
-     * Gestion de la touche Échap
+     * Esc key handling
      * @param {KeyboardEvent} event
      */
     handleEscapeKey(event) {
@@ -132,7 +126,7 @@ export class ModalManager {
     }
 
     /**
-     * Affiche l'overlay
+     * Displays the overlay
      */
     showOverlay() {
         if (this.overlay) {
@@ -141,7 +135,7 @@ export class ModalManager {
     }
 
     /**
-     * Cache l'overlay
+     * Hide the overlay
      */
     hideOverlay() {
         if (this.overlay) {
@@ -150,17 +144,14 @@ export class ModalManager {
     }
 
     /**
-     * Affiche une modale
+     * Displays a modal
      * @param {HTMLElement} modal
      */
     showModal(modal) {
         modal.style.display = "block";
-        // Améliorer l'accessibilité
         modal.setAttribute("aria-hidden", "false");
-
-        // Focus sur le premier élément focusable de la modale
         const focusableElement = modal.querySelector(
-            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
         );
         if (focusableElement) {
             focusableElement.focus();
@@ -168,7 +159,7 @@ export class ModalManager {
     }
 
     /**
-     * Cache une modale
+     * Hides a modal
      * @param {HTMLElement} modal
      */
     hideModal(modal) {
@@ -177,22 +168,22 @@ export class ModalManager {
     }
 
     /**
-     * Désactive le scroll du body
+     * Disable body scrolling
      */
     disableBodyScroll() {
         document.body.style.overflow = "hidden";
     }
 
     /**
-     * Réactive le scroll du body
+     * Reactivates body scrolling
      */
     enableBodyScroll() {
         document.body.style.overflow = "";
     }
 
     /**
-     * Vérifie si une modale est ouverte
-     * @param {string} id - ID de la modale
+     * Checks if a modal is open
+     * @param {string} id - ID of the modal
      * @returns {boolean}
      */
     isModalOpen(id) {
@@ -200,7 +191,7 @@ export class ModalManager {
     }
 
     /**
-     * Retourne la liste des modales ouvertes
+     * Returns the list of open modals
      * @returns {string[]}
      */
     getOpenModals() {
@@ -208,7 +199,7 @@ export class ModalManager {
     }
 
     /**
-     * Nettoie les événements lors de la destruction
+     * Cleanse up the events during destruction
      */
     destroy() {
         if (this.overlay) {
@@ -216,12 +207,11 @@ export class ModalManager {
         }
         document.removeEventListener("keydown", this.boundCloseOnEscape);
 
-        // Nettoyer les méthodes globales
         delete window.openModal;
         delete window.closeModal;
 
         this.closeAllModals();
         this.openModals.clear();
-        this.modalCache.clear(); // Vider le cache
+        this.modalCache.clear();
     }
 }

@@ -1,11 +1,9 @@
-// Système de carousel optimisé avec styles par défaut
 export class CarouselStyles {
     constructor(styleManager) {
         this.styleManager = styleManager;
         this.styleConfigs = this.#initializeStyleConfigs();
     }
 
-    // Configuration centralisée des styles
     #initializeStyleConfigs() {
         return {
             ".carousel-container": [
@@ -68,20 +66,18 @@ export class CarouselStyles {
         };
     }
 
-    // Application optimisée des styles
     addBaseStyles() {
         Object.entries(this.styleConfigs).forEach(
             ([selector, declarations]) => {
                 this.styleManager.addDeclarationsWithMediaQuery(
                     [],
                     selector,
-                    new Set(declarations)
+                    new Set(declarations),
                 );
-            }
+            },
         );
     }
 
-    // Méthodes utilitaires pour personnalisation dynamique
     updateStyleConfig(selector, newDeclarations) {
         if (this.styleConfigs[selector]) {
             this.styleConfigs[selector] = [
@@ -95,7 +91,6 @@ export class CarouselStyles {
         return this.styleConfigs[selector] || [];
     }
 
-    // Méthode pour ajouter des styles personnalisés
     addCustomStyles(customConfigs) {
         Object.assign(this.styleConfigs, customConfigs);
     }

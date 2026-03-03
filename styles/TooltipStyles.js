@@ -1,10 +1,4 @@
-/**
- * TooltipStyles.js
- * Tooltip styling functionality for the Marssel framework
- * Optimized version with improved performance and maintainability
- */
 export class TooltipStyles {
-    // Static constants for better performance and maintainability
     static SELECTORS = {
         BASE: ".tooltip",
         DARK: ".tooltip--dark",
@@ -144,7 +138,7 @@ export class TooltipStyles {
         this.styleManager.addDeclarationsWithMediaQuery(
             [],
             selector,
-            this.toSet(styles)
+            this.toSet(styles),
         );
     }
 

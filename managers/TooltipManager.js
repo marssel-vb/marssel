@@ -7,8 +7,6 @@ export class TooltipManager {
         this.tooltips = new LRUCache(100);
         this.activeTooltip = null;
         this.tooltipStyles = new TooltipStyles(marssel.styleManager);
-
-        // Configuration par défaut optimisée
         this.defaultOptions = Object.freeze({
             position: "top",
             offset: 8,
@@ -22,29 +20,23 @@ export class TooltipManager {
             hideDelay: 200,
             zIndex: 1000,
         });
-
-        // Cache pour les sélecteurs
         this.selectors = {
             tooltipTrigger: "[data-tooltip]",
             tooltipTriggerClass: "tooltip-trigger",
         };
-
-        // Debounce pour les événements
         this.debouncedMouseOver = this.debounce(
             this.handleMouseOver.bind(this),
-            50
+            50,
         );
         this.debouncedMouseOut = this.debounce(
             this.handleMouseOut.bind(this),
-            50
+            50,
         );
-
         this.boundHandleClick = this.handleClick.bind(this);
         this.boundHandleKeyDown = this.handleKeyDown.bind(this);
         this.boundHandleScroll = this.handleScroll.bind(this);
     }
 
-    // Utilitaire de debounce
     debounce(func, wait) {
         let timeout;
         return function executedFunction(...args) {
@@ -58,7 +50,6 @@ export class TooltipManager {
     }
 
     init() {
-        // Vérification d'existence optimisée
         if (!document.querySelector(this.selectors.tooltipTrigger)) return;
 
         this.tooltipStyles.initializeStyles();
@@ -67,43 +58,30 @@ export class TooltipManager {
     }
 
     setupEventListeners() {
-        // Utilisation de la délégation d'événements avec options optimisées
         const options = { passive: true };
-        // Options spécifiques pour le scroll (capture: true pour le détecter tôt)
         const scrollOptions = { passive: true, capture: true };
 
         document.addEventListener(
             "mouseover",
             this.debouncedMouseOver,
-            options
+            options,
         );
         document.addEventListener("mouseout", this.debouncedMouseOut, options);
-        document.addEventListener(
-            "click",
-            this.boundHandleClick, // MODIFIÉ
-            options
-        );
-        document.addEventListener(
-            "keydown",
-            this.boundHandleKeyDown, // MODIFIÉ
-            options
-        );
-        // NOUVEL ÉCOUTEUR
+        document.addEventListener("click", this.boundHandleClick, options);
+        document.addEventListener("keydown", this.boundHandleKeyDown, options);
         document.addEventListener(
             "scroll",
             this.boundHandleScroll,
-            scrollOptions
+            scrollOptions,
         );
     }
 
     scanForTooltips() {
-        // Utilisation de querySelectorAll avec optimisation
         const elements = document.querySelectorAll(
-            this.selectors.tooltipTrigger
+            this.selectors.tooltipTrigger,
         );
         if (elements.length === 0) return;
 
-        // Traitement par batch pour éviter les blocages
         this.processBatch(Array.from(elements), 0, 50);
     }
 
@@ -114,7 +92,6 @@ export class TooltipManager {
             this.registerTooltip(elements[i]);
         }
 
-        // Traitement asynchrone du batch suivant
         if (endIndex < elements.length) {
             requestAnimationFrame(() => {
                 this.processBatch(elements, endIndex, batchSize);
@@ -126,10 +103,8 @@ export class TooltipManager {
         const content = element.getAttribute("data-tooltip");
         if (!content?.trim()) return;
 
-        // Construction des options optimisée
         const options = this.buildOptions(element);
 
-        // Stockage optimisé
         this.tooltips.set(element, {
             content: content.trim(),
             options,
@@ -142,7 +117,6 @@ export class TooltipManager {
     }
 
     buildOptions(element) {
-        // Cache des attributs pour éviter les accès DOM répétés
         const attributes = {
             position: element.getAttribute("data-tooltip-position"),
             theme: element.getAttribute("data-tooltip-theme"),
@@ -220,7 +194,6 @@ export class TooltipManager {
         const { target } = event;
         const { tooltipElement } = tooltipData;
 
-        // Vérifications optimisées
         if (target === this.activeTooltip || tooltipElement?.contains(target)) {
             return;
         }
@@ -239,18 +212,16 @@ export class TooltipManager {
 
     handleScroll() {
         if (this.activeTooltip) {
-            // Cache immédiatement le tooltip actif dès le début du scroll
             this.hideTooltip(this.activeTooltip);
         }
     }
 
     findTooltipTrigger(element) {
-        // Optimisation avec une boucle while plus efficace
         let currentElement = element;
         while (currentElement && currentElement !== document.documentElement) {
             if (
                 currentElement.classList?.contains(
-                    this.selectors.tooltipTriggerClass
+                    this.selectors.tooltipTriggerClass,
                 )
             ) {
                 return currentElement;
@@ -264,22 +235,17 @@ export class TooltipManager {
         const tooltipData = this.tooltips.get(triggerElement);
         if (!tooltipData) return;
 
-        // Masquer le tooltip actif si différent
         if (this.activeTooltip && this.activeTooltip !== triggerElement) {
             this.hideTooltip(this.activeTooltip);
         }
 
-        // Création lazy du tooltip
         this.ensureTooltipElement(tooltipData);
-
-        // Positionnement et activation
         this.positionTooltip(
             triggerElement,
             tooltipData.tooltipElement,
-            tooltipData.options
+            tooltipData.options,
         );
 
-        // Activation avec RAF pour une meilleure performance
         requestAnimationFrame(() => {
             tooltipData.tooltipElement.classList.add("active");
         });
@@ -291,7 +257,7 @@ export class TooltipManager {
         if (!tooltipData.tooltipElement) {
             tooltipData.tooltipElement = this.createTooltipElement(
                 tooltipData.content,
-                tooltipData.options
+                tooltipData.options,
             );
             document.body.appendChild(tooltipData.tooltipElement);
         }
@@ -303,15 +269,13 @@ export class TooltipManager {
 
         tooltipData.tooltipElement.classList.remove("active");
         this.activeTooltip = null;
-
-        // Nettoyage différé optimisé
         this.scheduleCleanup(tooltipData);
     }
 
     scheduleCleanup(tooltipData) {
         setTimeout(() => {
             if (tooltipData.tooltipElement?.parentNode) {
-                tooltipData.tooltipElement.remove(); // Plus moderne que removeChild
+                tooltipData.tooltipElement.remove();
                 tooltipData.tooltipElement = null;
             }
         }, 300);
@@ -319,13 +283,10 @@ export class TooltipManager {
 
     createTooltipElement(content, options) {
         const tooltip = document.createElement("div");
-
-        // Construction des classes optimisée
         const classes = this.buildTooltipClasses(options);
         tooltip.className = classes;
         tooltip.innerHTML = content;
 
-        // Application des styles CSS personnalisés
         this.applyTooltipStyles(tooltip, options);
 
         return tooltip;
@@ -334,7 +295,6 @@ export class TooltipManager {
     buildTooltipClasses(options) {
         const classes = ["tooltip", `tooltip--${options.position}`];
 
-        // Ajouter le thème seulement si pas de classe personnalisée
         if (!options.customClass && ["dark", "light"].includes(options.theme)) {
             classes.push(`tooltip--${options.theme}`);
         }
@@ -372,13 +332,13 @@ export class TooltipManager {
             triggerRect,
             tooltipRect,
             scroll,
-            options
+            options,
         );
         this.applyResponsiveAdjustments(
             tooltipElement,
             position.top,
             position.left,
-            options
+            options,
         );
     }
 
@@ -447,35 +407,32 @@ export class TooltipManager {
         let adjustedLeft = left;
         let adjustedPosition = options.position;
 
-        // Ajustements horizontaux
         adjustedLeft = this.adjustHorizontalPosition(
             left,
             tooltipRect.width,
             scroll.left,
             viewport.width,
-            margin
+            margin,
         );
 
-        // Ajustements verticaux avec flip
         const verticalAdjustment = this.adjustVerticalPosition(
             top,
             tooltipRect.height,
             scroll.top,
             viewport.height,
             margin,
-            options
+            options,
         );
 
         adjustedTop = verticalAdjustment.top;
         adjustedPosition = verticalAdjustment.position;
 
-        // Application des ajustements
         this.applyPositionChanges(
             tooltipElement,
             adjustedTop,
             adjustedLeft,
             adjustedPosition,
-            options.position
+            options.position,
         );
     }
 
@@ -484,7 +441,7 @@ export class TooltipManager {
         tooltipWidth,
         scrollLeft,
         viewportWidth,
-        margin
+        margin,
     ) {
         if (left < scrollLeft) {
             return scrollLeft + margin;
@@ -501,7 +458,7 @@ export class TooltipManager {
         scrollTop,
         viewportHeight,
         margin,
-        options
+        options,
     ) {
         let adjustedTop = top;
         let adjustedPosition = options.position;
@@ -529,7 +486,7 @@ export class TooltipManager {
         top,
         left,
         newPosition,
-        originalPosition
+        originalPosition,
     ) {
         tooltipElement.style.top = `${top}px`;
         tooltipElement.style.left = `${left}px`;
@@ -540,7 +497,6 @@ export class TooltipManager {
         }
     }
 
-    // API publique optimisée
     createTooltip(element, content, options = {}) {
         if (!element || !content) return null;
 
@@ -573,7 +529,6 @@ export class TooltipManager {
 
         let needsRecreation = false;
 
-        // Mise à jour du contenu
         if (content) {
             tooltipData.content = content.trim();
             element.setAttribute("data-tooltip", content);
@@ -583,14 +538,12 @@ export class TooltipManager {
             }
         }
 
-        // Mise à jour des options
         if (Object.keys(options).length > 0) {
             tooltipData.options = { ...tooltipData.options, ...options };
             this.setOptionalAttributes(element, options);
             needsRecreation = true;
         }
 
-        // Recréation si nécessaire
         if (needsRecreation && tooltipData.tooltipElement) {
             this.hideTooltip(element);
             tooltipData.tooltipElement = null;
@@ -603,19 +556,15 @@ export class TooltipManager {
         const tooltipData = this.tooltips.get(element);
         if (!tooltipData) return false;
 
-        // Nettoyage des timeouts
         this.clearTimeout(tooltipData, "showTimeout");
         this.clearTimeout(tooltipData, "hideTimeout");
 
-        // Masquer si actif
         if (this.activeTooltip === element) {
             this.hideTooltip(element);
         }
 
-        // Nettoyage des données
         this.tooltips.delete(element);
 
-        // Nettoyage des attributs
         const attributes = [
             "data-tooltip",
             "data-tooltip-position",
@@ -631,25 +580,20 @@ export class TooltipManager {
         return true;
     }
 
-    // Méthode de nettoyage pour la destruction
     destroy() {
-        // Nettoyage de tous les tooltips
         this.tooltips.forEach((_, element) => {
             this.removeTooltip(element);
         });
 
-        // Suppression des event listeners
         document.removeEventListener("mouseover", this.debouncedMouseOver);
         document.removeEventListener("mouseout", this.debouncedMouseOut);
-        document.removeEventListener("click", this.boundHandleClick); // MODIFIÉ
-        document.removeEventListener("keydown", this.boundHandleKeyDown); // MODIFIÉ
-
+        document.removeEventListener("click", this.boundHandleClick);
+        document.removeEventListener("keydown", this.boundHandleKeyDown);
         document.removeEventListener("scroll", this.boundHandleScroll, {
             passive: true,
             capture: true,
         });
 
-        // Réinitialisation des propriétés
         this.tooltips.clear();
         this.activeTooltip = null;
     }

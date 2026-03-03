@@ -9,26 +9,22 @@ export class ToastManager {
         this.counter = 0;
         this.toastStyle = new ToastStyles(marssel.styleManager);
         this.stylesApplied = false;
-
-        // Configuration par défaut
         this.config = {
             position: "top-right",
             duration: 5000,
             animationDuration: 300,
         };
-
-        // Cache des éléments DOM
         this.domCache = new WeakMap();
+        // Map des groupes par position : { [position]: HTMLElement }
+        this.positionGroups = new Map();
+        this.bindGlobalMethods();
     }
 
     init() {
         this.createContainer();
-        //this.toastStyle.applyStyles();
-        this.bindGlobalMethods();
     }
 
     createContainer() {
-        // Éviter la recréation si le container existe déjà
         if (this.container?.parentNode) return;
 
         this.container = document.createElement("div");
@@ -36,8 +32,42 @@ export class ToastManager {
         document.body.appendChild(this.container);
     }
 
+    /**
+     * Retourne (ou crée) le sous-conteneur flex pour une position donnée.
+     */
+    getOrCreatePositionGroup(position) {
+        if (this.positionGroups.has(position)) {
+            return this.positionGroups.get(position);
+        }
+
+        const group = document.createElement("div");
+        group.className = "marssel-toast-group";
+        group.dataset.position = position;
+
+        // Applique les styles de position + flex sur le groupe
+        const positionStyles = this.toastStyle.getPositionStyles(
+            position,
+            this.config.position,
+        );
+        Object.assign(group.style, positionStyles);
+
+        this.container.appendChild(group);
+        this.positionGroups.set(position, group);
+        return group;
+    }
+
+    /**
+     * Supprime le groupe de position s'il est vide.
+     */
+    cleanupPositionGroup(position) {
+        const group = this.positionGroups.get(position);
+        if (group && group.children.length === 0) {
+            group.remove();
+            this.positionGroups.delete(position);
+        }
+    }
+
     bindGlobalMethods() {
-        // Utilisation d'arrow functions pour éviter les bind répétés
         const toastMethods = {
             show: (message, options) => this.show(message, options),
             success: (message, options) =>
@@ -55,6 +85,7 @@ export class ToastManager {
     }
 
     show(message, options = {}) {
+        this.createContainer();
         if (!this.stylesApplied) {
             this.toastStyle.applyStyles();
             this.stylesApplied = true;
@@ -86,16 +117,15 @@ export class ToastManager {
         const toast = document.createElement("div");
         toast.id = id;
         toast.className = this.buildToastClasses(config);
-
-        // Application des styles de position en une seule fois
-        this.applyPositionStyles(toast, config.position);
-
-        // Construction du contenu avec template literals optimisé
         toast.innerHTML = this.buildToastContent(message, config);
 
-        this.container.appendChild(toast);
+        // Insère dans le groupe de la position concernée
+        const group = this.getOrCreatePositionGroup(config.position);
+        group.appendChild(toast);
+
         this.toasts.set(id, {
             element: toast,
+            position: config.position,
             timeout: null,
             onClose: config.onClose,
         });
@@ -115,7 +145,7 @@ export class ToastManager {
 
         if (config.title) {
             parts.push(
-                `<div class="marssel-toast-title" style="font-weight: bold; margin-bottom: 0.5rem">${config.title}</div>`
+                `<div class="marssel-toast-title" style="font-weight: bold; margin-bottom: 0.5rem">${config.title}</div>`,
             );
         }
 
@@ -123,7 +153,7 @@ export class ToastManager {
 
         if (config.closable) {
             parts.push(
-                `<button class="marssel-toast-close" aria-label="Close">&times;</button>`
+                `<button class="marssel-toast-close" aria-label="Close">&times;</button>`,
             );
         }
 
@@ -134,16 +164,7 @@ export class ToastManager {
         return parts.join("");
     }
 
-    applyPositionStyles(toast, position) {
-        const positionStyles = this.toastStyle.getPositionStyles(
-            position,
-            this.config.position
-        );
-        Object.assign(toast.style, positionStyles);
-    }
-
     setupToastBehavior(id, toast, config) {
-        // Animation d'entrée avec requestAnimationFrame pour de meilleures performances
         requestAnimationFrame(() => {
             toast.classList.add("visible");
         });
@@ -176,7 +197,6 @@ export class ToastManager {
     }
 
     setupEventListeners(id, toast, config) {
-        // Délégation d'événements optimisée
         const eventHandler = (e) =>
             this.handleToastEvents(e, id, toast, config);
 
@@ -227,10 +247,9 @@ export class ToastManager {
         const progressBar = toast.querySelector(".marssel-toast-progress");
         if (!progressBar) return;
 
-        // Calcul optimisé du temps restant
         const remainingTime = this.calculateRemainingTime(
             progressBar,
-            config.duration
+            config.duration,
         );
 
         progressBar.style.transition = `transform ${
@@ -254,28 +273,24 @@ export class ToastManager {
                 return Math.max(0, scaleX * duration);
             }
         } catch (error) {
-            console.warn("Erreur lors du calcul du temps restant:", error);
+            console.warn("Error calculating remaining time:", error);
         }
-        return duration; // Fallback
+        return duration;
     }
 
     remove(id) {
         const toastData = this.toasts.get(id);
         if (!toastData) return;
 
-        const { element, timeout, onClose } = toastData;
+        const { element, position, timeout, onClose } = toastData;
 
-        // Nettoyage des timeouts
         if (timeout) {
             clearTimeout(timeout);
         }
 
-        // Nettoyage des event listeners
         this.cleanupEventListeners(element);
-
-        // Animation de sortie optimisée
         this.animateRemoval(element, () => {
-            this.finalizeRemoval(id, element, onClose);
+            this.finalizeRemoval(id, element, position, onClose);
         });
     }
 
@@ -299,21 +314,25 @@ export class ToastManager {
         setTimeout(callback, this.config.animationDuration);
     }
 
-    finalizeRemoval(id, element, onClose) {
-        element.remove(); // Plus moderne que parentNode.removeChild
+    finalizeRemoval(id, element, position, onClose) {
+        element.remove();
         this.toasts.delete(id);
+
+        // Nettoie le groupe s'il est vide
+        if (position) {
+            this.cleanupPositionGroup(position);
+        }
 
         if (typeof onClose === "function") {
             try {
                 onClose();
             } catch (error) {
-                console.error("Erreur dans le callback onClose:", error);
+                console.error("Error in the onClose callback:", error);
             }
         }
     }
 
     clear() {
-        // Utilisation de forEach avec Map pour une meilleure performance
         for (const id of this.toasts.keys()) {
             this.remove(id);
         }
@@ -324,17 +343,17 @@ export class ToastManager {
         if (!toastData) return;
 
         const toast = toastData.element;
+        const oldPosition = toastData.position;
 
-        // Reset des styles de position en une seule opération
-        Object.assign(toast.style, {
-            top: "",
-            right: "",
-            bottom: "",
-            left: "",
-            transform: "",
-        });
+        // Déplace le toast vers le nouveau groupe
+        const newGroup = this.getOrCreatePositionGroup(position);
+        newGroup.appendChild(toast);
+        toastData.position = position;
 
-        this.applyPositionStyles(toast, position);
+        // Nettoie l'ancien groupe s'il est vide
+        if (oldPosition) {
+            this.cleanupPositionGroup(oldPosition);
+        }
     }
 
     updateContent(id, options = {}) {
@@ -372,11 +391,11 @@ export class ToastManager {
         } else if (title) {
             titleElement = this.createTitleElement(title);
             const messageElement = toast.querySelector(
-                ".marssel-toast-message"
+                ".marssel-toast-message",
             );
             toast.insertBefore(
                 titleElement,
-                messageElement || toast.firstChild
+                messageElement || toast.firstChild,
             );
         }
     }
@@ -393,30 +412,27 @@ export class ToastManager {
     }
 
     updateType(toast, type) {
-        // Suppression efficace des classes de type existantes
         const typeClasses = Object.keys(this.toastStyle.types || {}).map(
-            (t) => `marssel-toast-${t}`
+            (t) => `marssel-toast-${t}`,
         );
 
         toast.classList.remove(...typeClasses);
 
-        // Ajout de la nouvelle classe si valide
         if (this.toastStyle.types?.[type]) {
             toast.classList.add(`marssel-toast-${type}`);
         }
     }
 
-    // Méthode utilitaire pour le debugging
     getActiveToasts() {
         return Array.from(this.toasts.keys());
     }
 
-    // Nettoyage complet de l'instance
     destroy() {
         this.clear();
         if (this.container?.parentNode) {
             this.container.remove();
         }
+        this.positionGroups.clear();
         if (window.marsselToast) {
             delete window.marsselToast;
         }

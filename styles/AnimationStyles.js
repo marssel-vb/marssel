@@ -1,7 +1,6 @@
 import { cleanValue } from "../utils/helpers.js";
 
 export class AnimationStyles {
-    // Animations prédéfinies
     static PREDEFINED_ANIMATIONS = Object.freeze({
         fadeIn: {
             from: { opacity: 0 },
@@ -148,23 +147,19 @@ export class AnimationStyles {
     }
 
     /**
-     * Enregistre des keyframes d'animation
+     * Record animation keyframes
      */
     registerKeyframes(name, keyframes) {
         if (this.keyframes.has(name)) return;
 
         const keyframesCSS = this.buildKeyframesCSS(name, keyframes);
         this.keyframes.set(name, keyframesCSS);
-
-        // Ajouter au StyleManager
         this.styleManager.addFontFace(keyframesCSS);
-
-        // ✅ AJOUT : Forcer la mise à jour immédiate
         this.styleManager.updateStyles();
     }
 
     /**
-     * Construit le CSS des keyframes
+     * Builds the CSS for the keyframes
      */
     buildKeyframesCSS(name, keyframes) {
         const rules = Object.entries(keyframes)
@@ -180,14 +175,14 @@ export class AnimationStyles {
     }
 
     /**
-     * Vérifie si des keyframes existent
+     * Checks if any keyframes exist
      */
     hasKeyframes(name) {
         return this.keyframes.has(name);
     }
 
     /**
-     * Applique une animation à un sélecteur
+     * Applies an animation to a selector
      */
     applyAnimationToSelector(selector, name, options) {
         const { duration, timing, delay, iteration, direction, fillMode } =
@@ -200,7 +195,7 @@ export class AnimationStyles {
             delay,
             iteration,
             direction,
-            fillMode
+            fillMode,
         );
 
         const declarations = new Set([`animation: ${animationValue}`]);
@@ -208,15 +203,14 @@ export class AnimationStyles {
         this.styleManager.addDeclarationsWithMediaQuery(
             [],
             selector,
-            declarations
+            declarations,
         );
 
-        // ✅ AJOUT : Forcer la mise à jour immédiate
         this.styleManager.updateStyles();
     }
 
     /**
-     * Construit la valeur complète de la propriété animation
+     * Constructs the full value of the animation property
      */
     buildAnimationValue(
         name,
@@ -225,19 +219,19 @@ export class AnimationStyles {
         delay,
         iteration,
         direction,
-        fillMode
+        fillMode,
     ) {
         return `${name} ${duration} ${timing} ${delay} ${iteration} ${direction} ${fillMode}`;
     }
 
     /**
-     * Ajoute une déclaration d'animation avec support !important
+     * Add an animation statement with support !important
      */
     addAnimationDeclaration(
         declarations,
         property,
         value,
-        isImportant = false
+        isImportant = false,
     ) {
         const cleanedValue = cleanValue(value);
         let declaration = `${property}: ${cleanedValue}`;
@@ -250,7 +244,7 @@ export class AnimationStyles {
     }
 
     /**
-     * Ajoute des animations personnalisées en masse
+     * Add custom animations in bulk
      */
     addCustomAnimations(animations) {
         Object.entries(animations).forEach(([name, keyframes]) => {
@@ -259,37 +253,37 @@ export class AnimationStyles {
     }
 
     /**
-     * Supprime une animation
+     * Delete an animation
+     * Note : Cannot be removed from the StyleManager once added.
+     * The entire style would need to be rebuilt
      */
     removeKeyframes(name) {
         this.keyframes.delete(name);
-        // Note: Ne peut pas supprimer du StyleManager une fois ajouté
-        // Il faudrait reconstruire tout le style
     }
 
     /**
-     * Obtient toutes les animations enregistrées
+     * Gets all recorded animations
      */
     getAllAnimations() {
         return Array.from(this.keyframes.keys());
     }
 
     /**
-     * Obtient les keyframes d'une animation
+     * Retrieves the keyframes of an animation
      */
     getKeyframes(name) {
         return this.keyframes.get(name);
     }
 
     /**
-     * Nettoie tous les keyframes
+     * Cleans all keyframes
      */
     clear() {
         this.keyframes.clear();
     }
 
     /**
-     * Crée une animation de transition entre deux états
+     * Creates a transition animation between two states
      */
     createTransitionAnimation(name, fromState, toState, steps = 2) {
         const keyframes = {};
@@ -303,7 +297,7 @@ export class AnimationStyles {
                 keyframes[`${percentage}%`] = this.interpolateStates(
                     fromState,
                     toState,
-                    i / (steps - 1)
+                    i / (steps - 1),
                 );
             }
         }
@@ -315,7 +309,7 @@ export class AnimationStyles {
     }
 
     /**
-     * Interpole entre deux états pour les transitions
+     * Interpolation between two states for transitions
      */
     interpolateStates(from, to, ratio) {
         const interpolated = {};
@@ -324,7 +318,6 @@ export class AnimationStyles {
             if (typeof from[key] === "number" && typeof to[key] === "number") {
                 interpolated[key] = from[key] + (to[key] - from[key]) * ratio;
             } else {
-                // Pour les propriétés non-numériques, basculer à mi-chemin
                 interpolated[key] = ratio < 0.5 ? from[key] : to[key];
             }
         });
@@ -333,7 +326,7 @@ export class AnimationStyles {
     }
 
     /**
-     * Crée une animation de boucle (loop)
+     * Create a loop animation
      */
     createLoopAnimation(name, states, easing = "linear") {
         const keyframes = {};
@@ -349,7 +342,7 @@ export class AnimationStyles {
     }
 
     /**
-     * Crée une animation de séquence
+     * Create a sequence animation
      */
     createSequenceAnimation(name, sequence) {
         const keyframes = {};
@@ -363,17 +356,15 @@ export class AnimationStyles {
     }
 
     /**
-     * Clone une animation existante avec modifications
+     * Clone an existing animation with modifications
      */
     cloneAnimation(sourceName, newName, modifications = {}) {
         const sourceKeyframes = this.getKeyframes(sourceName);
         if (!sourceKeyframes) {
-            console.warn(`Animation source "${sourceName}" non trouvée`);
+            console.warn(`Animation source "${sourceName}" not found`);
             return null;
         }
 
-        // Parser le CSS des keyframes (simplifié)
-        // Dans un cas réel, il faudrait un vrai parser
         const modifiedKeyframes = { ...modifications };
 
         this.registerKeyframes(newName, modifiedKeyframes);
@@ -381,10 +372,9 @@ export class AnimationStyles {
     }
 
     /**
-     * Combine plusieurs animations
+     * Combines several animations
      */
     combineAnimations(name, animationNames, delays = []) {
-        // Crée une animation complexe en combinant plusieurs
         const combinedKeyframes = {};
         const totalAnimations = animationNames.length;
         const segmentSize = 100 / totalAnimations;
@@ -393,12 +383,11 @@ export class AnimationStyles {
             const startPercent = Math.round(segmentSize * index);
             const endPercent = Math.round(segmentSize * (index + 1));
 
-            // Simplification - dans la réalité, il faudrait parser les keyframes existantes
             combinedKeyframes[`${startPercent}%`] = {
-                /* état initial de l'animation */
+                /* initial state of the animation */
             };
             combinedKeyframes[`${endPercent}%`] = {
-                /* état final de l'animation */
+                /* final state of the animation */
             };
         });
 
@@ -407,7 +396,7 @@ export class AnimationStyles {
     }
 
     /**
-     * Génère une animation de respiration (breathing effect)
+     * Generates a breathing effect animation
      */
     createBreathingAnimation(name, minScale = 1, maxScale = 1.05, steps = 4) {
         const keyframes = {
@@ -422,7 +411,7 @@ export class AnimationStyles {
     }
 
     /**
-     * Génère une animation de clignotement
+     * Generates a blinking animation
      */
     createBlinkAnimation(name, duration = "1s", times = 3) {
         const keyframes = {};
@@ -440,7 +429,7 @@ export class AnimationStyles {
     }
 
     /**
-     * Obtient les statistiques
+     * Get the statistics
      */
     getStats() {
         return {

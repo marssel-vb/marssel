@@ -18,44 +18,27 @@ export class StyleManager {
         this.selectorDeclarations = new Map();
         this.compiledRules = new Map();
         this.themeVariables = new Map();
-
-        // Configuration optimisée
         this.lazyload = Boolean(config.lazyload);
         this.maxBatchSize = config.maxBatchSize || 200;
         this.processingDelay = config.processingDelay || 50;
-
-        // État du lazy loading
         this.lazyObserver = null;
         this.lazyElements = new Map();
         this.pendingLazyElements = new Set();
         this.processingBatch = false;
-
-        // Flags pour les event listeners
         this.eventListenersAdded = false;
-
-        // Cache et optimisations
         this.debounceStyleUpdate = this.createDebouncer(16);
         this.handleRapidScroll = this.createScrollHandler();
         this.viewportCache = { height: 0, scrollTop: 0, timestamp: 0 };
-
-        // Tables de correspondance pour les propriétés
         this.initPropertyHandlers();
         this.initPseudoClassMap();
-
-        this.dirtySelectors = new Set(); // Nouveaux sélecteurs
+        this.dirtySelectors = new Set();
         this.needsFullRebuild = false;
-
-        // Clé de stockage pour le cache CSS
         this.STORAGE_KEY = "marssel_styles_cache";
-        this.STORAGE_VERSION = MARSSEL_VERSION; // ✅ Synchronisé avec package.json
-
-        // Sélecteurs critiques
+        this.STORAGE_VERSION = MARSSEL_VERSION;
         this.criticalsSelectors = marssel.constructor.CRITICAL_SELECTORS || [];
-
-        this.loadedClasses = new Set(); // Track les classes chargées
+        this.loadedClasses = new Set();
     }
 
-    // === INITIALISATION ===
     initPropertyHandlers() {
         this.propertyHandlers = {
             "icon-size": (value, declarations, selector, parsed) => {
@@ -139,7 +122,6 @@ export class StyleManager {
             },
 
             "bg-linear": (value, declarations, selector, parsed) => {
-                // MODIFICATION : Ajouter .replace(/_/g, " ")
                 const processedValue = processGradientColors(
                     value.replace(/_/g, " "),
                 );
@@ -151,7 +133,6 @@ export class StyleManager {
             },
 
             "bg-radial": (value, declarations, selector, parsed) => {
-                // MODIFICATION : Ajouter .replace(/_/g, " ")
                 const processedValue = processGradientColors(
                     value.replace(/_/g, " "),
                 );
@@ -273,7 +254,6 @@ export class StyleManager {
                     parsed.isImportant,
                 );
             },
-            // AJOUTÉ : Handlers pour les animations
             animation: (value, declarations, selector, parsed) => {
                 this.marssel.animationManager.handleAnimationProperty(
                     value,
@@ -363,7 +343,6 @@ export class StyleManager {
             "read-write",
         ]);
 
-        // ✅ AJOUT : Pseudo-classes avec paramètres
         this.functionalPseudos = new Set([
             "nth-child",
             "nth-last-child",
@@ -404,7 +383,6 @@ export class StyleManager {
         window.addEventListener("hashchange", this.handleHashChange.bind(this));
         this.eventListenersAdded = true;
 
-        // Vérifier immédiatement s'il y a une ancre
         if (window.location.hash) {
             setTimeout(() => this.handleHashChange(), 100);
         }
@@ -417,28 +395,6 @@ export class StyleManager {
         window.removeEventListener("hashchange", this.handleHashChange);
         this.eventListenersAdded = false;
     }
-
-    // === GESTIONNAIRES D'ÉVÉNEMENTS ===
-    /*applyThemeVariables(theme) {
-        const themeConfig = this.marssel.themeManager.getThemeVariables(theme);
-
-        Object.entries(themeConfig).forEach(([varName, value]) => {
-            this.themeVariables.set(varName, value);
-        });
-
-        this.updateRootVariables();
-        this.debounceStyleUpdate();
-    }
-
-    updateRootVariables() {
-        const rootDeclarations = new Set();
-
-        this.themeVariables.forEach((value, varName) => {
-            rootDeclarations.add(`${varName}: ${value}`);
-        });
-
-        this.addDeclarationsWithMediaQuery([], ":root", rootDeclarations);
-    }*/
 
     handleIntersection(entries) {
         const elementsToProcess = entries.reduce((acc, entry) => {
@@ -460,34 +416,6 @@ export class StyleManager {
             this.debounceStyleUpdate();
         }
     }
-
-    /*processElements(elementsToProcess) {
-        const classProcessors = {
-            hasGroupPseudo: (className) =>
-                className.startsWith("[") && className.includes("]-"),
-            hasCompactStyles: (className) => className.includes("---["),
-            hasCombined: (className) => className.includes("+"),
-            hasChildSelector: (className) => className.includes(">"),
-        };
-
-        elementsToProcess.forEach(({ classes }) => {
-            classes.forEach((className) => {
-                if (classProcessors.hasGroupPseudo(className)) {
-                    this.marssel.domManager.processGroupPseudoClass(className);
-                } else if (classProcessors.hasCompactStyles(className)) {
-                    this.marssel.domManager.processCompactStyles(className);
-                } else if (classProcessors.hasCombined(className)) {
-                    this.marssel.domManager.processCombinedClass(className);
-                } else if (classProcessors.hasChildSelector(className)) {
-                    this.marssel.domManager.processChildSelectorClass(
-                        className
-                    );
-                } else {
-                    this.marssel.domManager.processClassName(className);
-                }
-            });
-        });
-    }*/
 
     processElements(elementsToProcess) {
         elementsToProcess.forEach(({ classes }) => {
@@ -534,7 +462,6 @@ export class StyleManager {
         };
     }
 
-    // === TRAITEMENT DES ÉLÉMENTS VISIBLES ===
     processVisibleElements() {
         if (!this.lazyload) return;
 
@@ -573,7 +500,6 @@ export class StyleManager {
     getViewportInfo() {
         const now = performance.now();
 
-        // Cache pendant 100ms au lieu de 16ms pour réduire les recalculs
         if (now - this.viewportCache.timestamp < 100) {
             return this.viewportCache;
         }
@@ -584,7 +510,6 @@ export class StyleManager {
             timestamp: now,
         };
 
-        // Calculer bottomPosition une seule fois
         this.viewportCache.bottomPosition =
             this.viewportCache.scrollTop + this.viewportCache.height;
 
@@ -608,7 +533,6 @@ export class StyleManager {
         }
     }
 
-    // === TRAITEMENT PAR LOTS ===
     processBatch() {
         if (!this.pendingLazyElements.size) {
             this.processingBatch = false;
@@ -626,7 +550,6 @@ export class StyleManager {
 
         this.processElements(elementsToProcess);
 
-        // Nettoyer les éléments traités
         elementsToProcess.forEach(({ element }) => {
             this.lazyElements.delete(element);
             this.lazyObserver.unobserve(element);
@@ -635,7 +558,6 @@ export class StyleManager {
 
         this.debounceStyleUpdate();
 
-        // Planifier le prochain lot
         if (this.pendingLazyElements.size > 0) {
             setTimeout(() => this.processBatch(), this.processingDelay);
         } else {
@@ -643,7 +565,6 @@ export class StyleManager {
         }
     }
 
-    // === GESTION DES STYLES ===
     ensureStyleElement() {
         if (!document.getElementById("marssel-styles")) {
             const style = document.createElement("style");
@@ -658,19 +579,11 @@ export class StyleManager {
         this.loadCachedStyles();
 
         const processAndUpdate = () => {
-            // Traiter d'abord les éléments critiques
             this.processCriticalElements();
-
-            // Force la mise à jour immédiate des styles critiques
             this.updateStyles();
 
-            // Attendre que les styles soient appliqués avant d'afficher
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
-                    // Afficher le body maintenant
-                    document.body.classList.add("marssel-ready");
-
-                    // Puis traiter tous les autres éléments en arrière-plan
                     this.marssel.domManager.processAllElements();
 
                     if (this.lazyload) {
@@ -686,7 +599,6 @@ export class StyleManager {
             this.initLazyObserver();
         }
 
-        // Démarrer le traitement
         if ("requestIdleCallback" in window) {
             requestIdleCallback(processAndUpdate);
         } else {
@@ -694,18 +606,27 @@ export class StyleManager {
         }
     }
 
-    // Nouvelle méthode pour traiter les éléments critiques
+    updateStylesSync() {
+        const styleElement = document.getElementById("marssel-styles");
+        if (!styleElement) return;
+
+        const cssChunks = [
+            ...this.fontFaces,
+            ...this.generateRegularRules(),
+            ...this.generateMediaQueryRules(),
+        ];
+
+        styleElement.textContent = cssChunks.join("\n");
+    }
+
     processCriticalElements() {
         const criticalElements = this.getCriticalElements();
 
-        // MODIFICATION : Traiter TOUS les éléments critiques immédiatement
         criticalElements.forEach((element) => {
             if (!(element instanceof HTMLElement)) return;
 
-            // Traiter l'élément
             this.marssel.domManager.processElement(element);
 
-            // AJOUT : Traiter TOUS les enfants des éléments critiques
             const allChildren = element.querySelectorAll("*");
             allChildren.forEach((child) => {
                 if (child instanceof HTMLElement) {
@@ -713,7 +634,6 @@ export class StyleManager {
                 }
             });
 
-            // Retirer du lazy loading
             if (this.lazyElements.has(element)) {
                 this.lazyElements.delete(element);
                 if (this.lazyObserver) {
@@ -722,7 +642,6 @@ export class StyleManager {
             }
         });
 
-        // Traiter les classes de base APRÈS
         const allBaseClasses = new Set();
         document.querySelectorAll("*").forEach((element) => {
             element.classList.forEach((className) => {
@@ -739,9 +658,7 @@ export class StyleManager {
             this.marssel.domManager.pendingClasses.add(baseClass);
         });
         this.marssel.domManager.processPendingClasses();
-
-        // Force la mise à jour immédiate
-        this.updateStyles();
+        this.updateStylesSync();
     }
 
     extractBaseClass(className) {
@@ -778,11 +695,8 @@ export class StyleManager {
         this.marssel.domManager.processPendingClasses();
         this.updateStyles();
 
-        // Reste du code existant...
         const viewport = this.getViewportInfo();
         const elementsToProcess = [];
-
-        // Traiter en priorité les éléments critiques (header, footer, nav)
         const criticalElements = this.getCriticalElements();
 
         this.lazyElements.forEach((classes, element) => {
@@ -791,14 +705,12 @@ export class StyleManager {
                 rect.top < viewport.height + 1000 && rect.bottom > -1000;
             const isCritical = criticalElements.includes(element);
 
-            // Traiter immédiatement les éléments critiques visibles
             if (isVisible || isCritical) {
                 elementsToProcess.push({ element, classes, isCritical });
             }
         });
 
         if (elementsToProcess.length > 0) {
-            // Séparer les éléments critiques des autres
             const criticalToProcess = elementsToProcess.filter(
                 (item) => item.isCritical,
             );
@@ -806,7 +718,6 @@ export class StyleManager {
                 (item) => !item.isCritical,
             );
 
-            // Traiter d'abord les éléments critiques
             if (criticalToProcess.length > 0) {
                 this.processElements(criticalToProcess);
                 criticalToProcess.forEach(({ element }) => {
@@ -815,7 +726,6 @@ export class StyleManager {
                 });
             }
 
-            // Puis traiter les éléments réguliers
             if (regularToProcess.length > 0) {
                 this.processElements(regularToProcess);
                 regularToProcess.forEach(({ element }) => {
@@ -834,11 +744,10 @@ export class StyleManager {
                 const elements = document.querySelectorAll(selector);
                 criticalElements.push(...elements);
             } catch (e) {
-                // Ignorer les erreurs de sélecteur
+                //
             }
         });
 
-        // AJOUT : Inclure tous les éléments avec .no-lazy
         const noLazyElements = document.querySelectorAll(".no-lazy");
         noLazyElements.forEach((el) => {
             if (!criticalElements.includes(el)) {
@@ -869,21 +778,17 @@ export class StyleManager {
     }
 
     convertPseudoClass(mod) {
-        // ✅ AJOUT : Gérer les pseudo-classes fonctionnelles avec paramètres
-        // Format attendu: nth-child[2n+1] ou not[.disabled]
         const functionalMatch = mod.match(/^([a-z-]+)\[(.+)\]$/);
 
         if (functionalMatch) {
             const [, pseudoName, params] = functionalMatch;
 
             if (this.functionalPseudos.has(pseudoName)) {
-                // Remplacer les underscores par des espaces dans les paramètres
                 const cleanParams = params.replace(/_/g, " ");
                 return `${pseudoName}(${cleanParams})`;
             }
         }
 
-        // Code existant pour les autres pseudo-classes
         return mod.replace(/([a-z]+)-([a-z]+)/g, (match, p1, p2) => {
             const fullName = `${p1}-${p2}`;
             return this.compoundPseudos.has(fullName) ? fullName : match;
@@ -902,21 +807,17 @@ export class StyleManager {
             const { version, htmlHash, css, selectorMap, loadedClasses } =
                 JSON.parse(cached);
 
-            // Vérifier la version
             if (version !== this.STORAGE_VERSION) {
                 sessionStorage.removeItem(this.STORAGE_KEY);
                 return;
             }
 
-            // ✅ NOUVEAU : Vérifier si le HTML a changé
             const currentHash = this.getHTMLHash();
             if (htmlHash && htmlHash !== currentHash) {
-                console.log("🔄 HTML modifié, cache invalidé");
                 sessionStorage.removeItem(this.STORAGE_KEY);
                 return;
             }
 
-            // Restaurer les classes chargées
             if (loadedClasses && Array.isArray(loadedClasses)) {
                 loadedClasses.forEach((className) => {
                     this.loadedClasses.add(className);
@@ -924,7 +825,6 @@ export class StyleManager {
                 });
             }
 
-            // Restaurer la map des sélecteurs avec nettoyage
             if (selectorMap) {
                 Object.entries(selectorMap).forEach(([key, value]) => {
                     if (key.startsWith("@media")) {
@@ -957,71 +857,60 @@ export class StyleManager {
                 });
             }
 
-            const classCount = loadedClasses ? loadedClasses.length : 0;
-            console.log(
-                `✅ Cache chargé: ${classCount} classes, regénération du CSS propre...`,
-            );
-
-            // Regénérer le CSS propre
             this.updateStyles();
         } catch (error) {
-            console.warn("Erreur chargement cache styles:", error);
+            console.warn("Error loading cache styles:", error);
             sessionStorage.removeItem(this.STORAGE_KEY);
         }
     }
 
     /**
-     * Nettoie les déclarations en conflit (même propriété, valeur différente)
-     * @param {Set|undefined} existingDeclarations - Déclarations existantes
-     * @param {Set} newDeclarations - Nouvelles déclarations du cache
-     * @returns {Set} - Déclarations nettoyées
+     * Cleans up conflicting declarations (same property, different value)
+     * @param {Set|undefined} existingDeclarations - Existing declarations
+     * @param {Set} newDeclarations - New declarations from the cache
+     * @returns {Set} - Cleaned up declarations
      */
     cleanConflictingDeclarations(existingDeclarations, newDeclarations) {
-        // Si pas de déclarations existantes, retourner les nouvelles
         if (!existingDeclarations) {
             return newDeclarations;
         }
 
-        // Extraire les propriétés des nouvelles déclarations
         const newProperties = new Set();
         newDeclarations.forEach((decl) => {
             const property = decl.split(":")[0].trim();
             newProperties.add(property);
         });
 
-        // Filtrer les anciennes déclarations qui ont la même propriété
         const filteredExisting = new Set();
         existingDeclarations.forEach((decl) => {
             const property = decl.split(":")[0].trim();
-            // Garder seulement si la propriété n'est pas dans les nouvelles
+
             if (!newProperties.has(property)) {
                 filteredExisting.add(decl);
             }
         });
 
-        // Fusionner : anciennes (filtrées) + nouvelles
         return new Set([...filteredExisting, ...newDeclarations]);
     }
 
     /**
-     * Génère un hash simple d'une chaîne
-     * Utilisé pour détecter les changements de HTML
+     * Generates a simple hash of a string
+     * Used to detect HTML changes
      */
     simpleHash(str) {
         let hash = 0;
         for (let i = 0; i < Math.min(str.length, 10000); i++) {
             const char = str.charCodeAt(i);
             hash = (hash << 5) - hash + char;
-            hash = hash & hash; // Convert to 32bit integer
+            hash = hash & hash;
         }
         return hash.toString(36);
     }
 
     /**
-     * Génère un hash du HTML des éléments avec classes Marssel
+     * Generates a hash of the HTML of elements with Marssel classes
      */
     getHTMLHash() {
-        // Ne hasher que les éléments avec des classes (pour la performance)
         const elements = document.querySelectorAll("[class]");
         const classesString = Array.from(elements)
             .map((el) => el.className)
@@ -1033,22 +922,19 @@ export class StyleManager {
         try {
             const styleElement = document.getElementById("marssel-styles");
             if (!styleElement) {
-                console.warn("❌ Élément marssel-styles introuvable");
+                console.warn("❌ Item not found: Marssel Styles");
                 return;
             }
 
-            // Convertir la Map en objet sérialisable
             const selectorMap = {};
             this.selectorDeclarations.forEach((value, key) => {
                 if (value instanceof Map) {
-                    // Media query
                     const mediaSelectors = {};
                     value.forEach((decls, selector) => {
                         mediaSelectors[selector] = Array.from(decls);
                     });
                     selectorMap[key] = mediaSelectors;
                 } else {
-                    // Sélecteur normal
                     selectorMap[key] = Array.from(value);
                 }
             });
@@ -1057,10 +943,9 @@ export class StyleManager {
             const maxClasses = 1000;
             const loadedClassesArray = Array.from(this.loadedClasses);
 
-            // ✅ NOUVEAU : Sauvegarder aussi les classes chargées
             const cache = {
                 version: this.STORAGE_VERSION,
-                htmlHash: this.getHTMLHash(), // Hash des classes du DOM
+                htmlHash: this.getHTMLHash(),
                 css: css,
                 selectorMap: selectorMap,
                 loadedClasses: loadedClassesArray.slice(-maxClasses),
@@ -1068,12 +953,8 @@ export class StyleManager {
             };
 
             sessionStorage.setItem(this.STORAGE_KEY, JSON.stringify(cache));
-
-            console.log(
-                `💾 Cache sauvegardé: ${css.length} chars CSS, ${this.loadedClasses.size} classes`,
-            );
         } catch (error) {
-            console.warn("❌ Erreur sauvegarde cache:", error);
+            console.warn("❌ Error saving cache:", error);
         }
     }
 
@@ -1087,7 +968,6 @@ export class StyleManager {
             const styleElement = document.getElementById("marssel-styles");
             if (!styleElement) return;
 
-            // Utiliser textContent une seule fois au lieu de multiples appendChild
             const cssChunks = [
                 ...this.fontFaces,
                 ...this.generateRegularRules(),
@@ -1096,16 +976,15 @@ export class StyleManager {
 
             styleElement.textContent = cssChunks.join("\n");
 
-            // ✅ CORRECTION : Sauvegarder APRÈS que le CSS soit généré
             this.saveCachedStyles();
         });
     }
 
     updateFullStyles(styleElement) {
         const css = [
-            ...this.fontFaces, // 1. Font faces
-            ...this.generateRegularRules(), // 2. Règles de base (sans media query)
-            ...this.generateMediaQueryRules(), // 3. Media queries (triées)
+            ...this.fontFaces,
+            ...this.generateRegularRules(),
+            ...this.generateMediaQueryRules(),
         ];
         styleElement.textContent = css.join("\n");
     }
@@ -1123,7 +1002,6 @@ export class StyleManager {
     }
 
     generateMediaQueryRules() {
-        // Définir l'ordre des breakpoints
         const breakpointOrder = {
             xs: 0,
             sm: 1,
@@ -1133,9 +1011,7 @@ export class StyleManager {
             xxl: 5,
         };
 
-        // Fonction pour extraire le type et la taille du breakpoint d'une media query
         const parseMediaQuery = (mediaQueryKey) => {
-            // Exemples: "@media (min-width: 768px)" ou "@media (max-width: 991px)"
             const minWidthMatch = mediaQueryKey.match(/min-width:\s*(\d+)px/);
             const maxWidthMatch = mediaQueryKey.match(/max-width:\s*(\d+)px/);
 
@@ -1151,29 +1027,24 @@ export class StyleManager {
         const rules = [];
         const mediaQueries = [];
 
-        // Séparer les media queries des règles normales
         this.selectorDeclarations.forEach((value, key) => {
             if (key.startsWith("@media")) {
                 mediaQueries.push(key);
             }
         });
 
-        // Trier les media queries
         mediaQueries.sort((a, b) => {
             const parsedA = parseMediaQuery(a);
             const parsedB = parseMediaQuery(b);
 
-            // min-width : du plus petit au plus grand
             if (parsedA.type === "min" && parsedB.type === "min") {
                 return parsedA.value - parsedB.value;
             }
 
-            // max-width : du plus grand au plus petit
             if (parsedA.type === "max" && parsedB.type === "max") {
                 return parsedB.value - parsedA.value;
             }
 
-            // min-width avant max-width
             if (parsedA.type === "min" && parsedB.type === "max") {
                 return -1;
             }
@@ -1184,7 +1055,6 @@ export class StyleManager {
             return 0;
         });
 
-        // Générer les règles CSS dans l'ordre trié
         mediaQueries.forEach((mediaQuery) => {
             const mediaQuerySelectors =
                 this.selectorDeclarations.get(mediaQuery);
@@ -1208,7 +1078,6 @@ export class StyleManager {
             return;
         }
 
-        // Box-sizing pour tous les éléments
         const boxSizingDeclarations = new Set(["box-sizing: border-box"]);
         ["*", "*::before", "*::after"].forEach((selector) => {
             this.addDeclarationsWithMediaQuery(
@@ -1218,7 +1087,6 @@ export class StyleManager {
             );
         });
 
-        // Variable CSS pour la taille des icônes
         const rootDeclarations = new Set([
             `--icon-size: ${this.marssel.iconManager.sizes.medium}`,
         ]);
@@ -1266,11 +1134,9 @@ export class StyleManager {
 
     generateDeclarations(parsed, selector) {
         const { property, value } = parsed;
-
-        // Réutiliser un Set au lieu d'en créer un nouveau
         const declarations = this.marssel.domManager.getDeclarationSet();
-
         const handler = this.propertyHandlers[property];
+
         if (handler) {
             handler(value, declarations, selector, parsed);
         } else {
@@ -1435,7 +1301,6 @@ export class StyleManager {
     handleGenericProperty(parsed, declarations) {
         const { property, value, isImportant } = parsed;
 
-        // AJOUTÉ : Cas spéciaux RGB/RGBA
         if (
             property === "bg-rgb" ||
             property === "bg-rgba" ||
@@ -1485,7 +1350,6 @@ export class StyleManager {
 
         if (!this.marssel.constructor.properties[property]) {
             const formattedProperty = property.replace(/_/g, "-");
-            // ✅ FIX: Ajouter addHashToHex pour traiter les couleurs hex dans toutes les valeurs
             const processedValue = addHashToHex(cleanValue(value));
             let declaration = `${formattedProperty}: ${processedValue}`;
             if (isImportant && !declaration.includes("!important")) {
@@ -1499,7 +1363,6 @@ export class StyleManager {
             if (this.isColorProperty(property)) {
                 cssValue = this.marssel.domManager.processColor(cssValue);
             } else {
-                // ✅ FIX: Traiter les hex même pour les propriétés non-couleur (border, outline, etc.)
                 cssValue = addHashToHex(cssValue);
             }
 

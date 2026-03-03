@@ -1,7 +1,6 @@
-// Configuration des propriétés CSS avec regroupement logique et optimisations
 export const CACHE_LIMITS = {
-    PARSE_CACHE_MAX: 500, // au lieu de 1000
-    CLASS_CACHE_MAX: 300, // au lieu de illimité
+    PARSE_CACHE_MAX: 500,
+    CLASS_CACHE_MAX: 300,
     SELECTOR_CACHE_MAX: 200,
 };
 
@@ -19,10 +18,10 @@ export const CRITICAL_SELECTORS = [
     ".nav",
     "main",
     '[role="main"]',
+    ".cookies-wrapper",
 ];
 
 const CSS_PROPERTIES = Object.freeze({
-    // Layout & Display
     layout: {
         d: "display",
         pos: "position",
@@ -34,7 +33,6 @@ const CSS_PROPERTIES = Object.freeze({
         visible: "visibility",
     },
 
-    // Dimensions
     dimensions: {
         w: "width",
         h: "height",
@@ -44,7 +42,6 @@ const CSS_PROPERTIES = Object.freeze({
         "max-h": "max-height",
     },
 
-    // Spacing - Margin
     margin: {
         m: "margin",
         mt: "margin-top",
@@ -55,7 +52,6 @@ const CSS_PROPERTIES = Object.freeze({
         my: ["margin-top", "margin-bottom"],
     },
 
-    // Spacing - Padding
     padding: {
         p: "padding",
         pt: "padding-top",
@@ -66,7 +62,6 @@ const CSS_PROPERTIES = Object.freeze({
         py: ["padding-top", "padding-bottom"],
     },
 
-    // Flexbox & Grid
     flex: {
         flex: "flex",
         "flex-direction": "flex-direction",
@@ -87,7 +82,6 @@ const CSS_PROPERTIES = Object.freeze({
         col: "grid-column",
     },
 
-    // Spacing - Gap & Gutter
     gap: {
         gap: "gap",
         "gap-x": "column-gap",
@@ -97,7 +91,6 @@ const CSS_PROPERTIES = Object.freeze({
         "gutter-y": "gutter-y",
     },
 
-    // Typography
     typography: {
         c: "color",
         "c-rgb": "color",
@@ -115,7 +108,6 @@ const CSS_PROPERTIES = Object.freeze({
         "word-spacing": "word-spacing",
     },
 
-    // Background
     background: {
         bg: "background-color",
         "bg-color": "background-color",
@@ -128,7 +120,6 @@ const CSS_PROPERTIES = Object.freeze({
         "bg-size": "background-size",
     },
 
-    // Border
     border: {
         border: "border",
         "border-t": "border-top",
@@ -142,7 +133,6 @@ const CSS_PROPERTIES = Object.freeze({
         "border-style": "border-style",
     },
 
-    // Border Radius
     borderRadius: {
         rounded: "border-radius",
         "rounded-t": ["border-top-left-radius", "border-top-right-radius"],
@@ -158,7 +148,6 @@ const CSS_PROPERTIES = Object.freeze({
         "rounded-bl": "border-bottom-left-radius",
     },
 
-    // Effects
     effects: {
         shadow: "box-shadow",
         opacity: "opacity",
@@ -166,7 +155,6 @@ const CSS_PROPERTIES = Object.freeze({
         cursor: "cursor",
     },
 
-    // Custom Components
     custom: {
         icon: "icon",
         "icon-size": "--icon-size",
@@ -178,7 +166,6 @@ const CSS_PROPERTIES = Object.freeze({
         "progress-radius": "--progress-border-radius",
     },
 
-    // Animations & Transforms
     animations: {
         animation: "animation",
         "animation-name": "animation-name",
@@ -197,14 +184,13 @@ const CSS_PROPERTIES = Object.freeze({
     },
 });
 
-// Export de la version aplatie pour compatibilité
+// Export of the flattened version for compatibility
 export const properties = Object.freeze(
     Object.values(CSS_PROPERTIES).reduce((acc, group) => {
         return Object.assign(acc, group);
     }, Object.create(null)),
 );
 
-// Breakpoints et containers optimisés
 export const breakpoints = Object.freeze({
     xs: "320px",
     sm: "576px",
@@ -222,12 +208,10 @@ export const containerMaxWidths = Object.freeze({
     xxl: "1320px",
 });
 
-// Regex optimisées avec compilation unique
 export const REGEX_PATTERNS = Object.freeze({
     CLASS: /^(?:([a-zA-Z0-9-]+)---)?(?:(?:m--)?([a-z0-9]+(?:--[a-z0-9]+)*)--)?([a-z0-9-]+)-\[(.*?)\](?::([a-z-_()\[\]]+(?::[a-z-_()\[\]]+)*))?(!)?$/,
 
     COLOR: Object.freeze({
-        // ✅ MODIFIÉ : Support hex 3 et 6 caractères
         HEX: /^[0-9A-Fa-f]{3}$|^[0-9A-Fa-f]{6}$/,
         RGB: /^(\d+),(\d+),(\d+)$/,
         RGBA: /^(\d+),(\d+),(\d+),(\d*\.?\d+)$/,
@@ -268,13 +252,12 @@ export const defaultThemes = {
     },
 };
 
-// Utilitaires optimisés avec Map pour de meilleures performances
 const propertyLookup = new Map();
 const breakpointSet = new Set(Object.keys(breakpoints));
 
 export const utils = Object.freeze({
     /**
-     * Obtient une propriété CSS par son nom court (optimisé avec Map)
+     * Obtains a CSS property by its short name (optimized with Map)
      */
     getCSSProperty: (shortName) => {
         if (!propertyLookup.has(shortName)) {
@@ -284,32 +267,32 @@ export const utils = Object.freeze({
     },
 
     /**
-     * Vérifie si une valeur est un code couleur HEX valide
+     * Checks if a value is a valid HEX color code
      */
     isValidHex: (value) => REGEX_PATTERNS.COLOR.HEX.test(value),
 
     /**
-     * Vérifie si une valeur est une couleur RGB valide
+     * Checks if a value is a valid RGB color value
      */
     isValidRGB: (value) => REGEX_PATTERNS.COLOR.RGB.test(value),
 
     /**
-     * Vérifie si une valeur a une unité CSS valide
+     * Checks if a value has a valid CSS unit
      */
     hasValidUnit: (value) => REGEX_PATTERNS.UNITS.test(value),
 
     /**
-     * Obtient toutes les propriétés d'un groupe spécifique
+     * Obtains all CSS properties for a specific group
      */
     getPropertyGroup: (groupName) => CSS_PROPERTIES[groupName],
 
     /**
-     * Vérifie si un breakpoint existe (optimisé avec Set)
+     * Checks if a breakpoint exists (optimized with Set)
      */
     hasBreakpoint: (bp) => breakpointSet.has(bp),
 
     /**
-     * Parse une valeur d'unité CSS
+     * Parse a CSS unit value
      */
     parseUnit: (value) => {
         const match = value.match(REGEX_PATTERNS.UNITS);
@@ -317,11 +300,10 @@ export const utils = Object.freeze({
     },
 
     /**
-     * Vérifie si une propriété accepte plusieurs valeurs CSS
+     * Checks if a CSS property accepts multiple values
      */
     isMultiProperty: (property) => Array.isArray(properties[property]),
 });
 
-// Exports pour compatibilité descendante
 export const CLASS_REGEX = REGEX_PATTERNS.CLASS;
 export const COLOR_REGEX = REGEX_PATTERNS.COLOR;

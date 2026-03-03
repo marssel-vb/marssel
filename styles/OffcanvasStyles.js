@@ -1,6 +1,4 @@
-// Styles par défaut pour le système d'offcanvas - Version optimisée
 export class OffcanvasStyles {
-    // Configuration centralisée
     static CONFIG = {
         TRANSITIONS: {
             DURATION: "0.3s",
@@ -31,7 +29,6 @@ export class OffcanvasStyles {
     }
 
     initializeStyles() {
-        // Groupement des styles par catégorie pour une meilleure organisation
         this.addCoreStyles();
         this.addHeaderStyles();
         this.addDirectionalStyles();
@@ -41,7 +38,6 @@ export class OffcanvasStyles {
     addCoreStyles() {
         const { CONFIG } = OffcanvasStyles;
 
-        // Styles de base de l'offcanvas
         this.addStyle(".offcanvas", [
             "position: fixed",
             "display: flex",
@@ -54,21 +50,15 @@ export class OffcanvasStyles {
             `box-shadow: 0 0.5rem 1rem ${CONFIG.COLORS.SHADOW}`,
             "visibility: hidden",
         ]);
-
-        // État actif
         this.addStyle(".offcanvas.show", [
             "transform: none !important",
             "visibility: visible",
         ]);
-
-        // Corps de l'offcanvas
         this.addStyle(".offcanvas-body", [
             "flex-grow: 1",
             `padding: ${CONFIG.SPACING.PADDING}`,
             "overflow-y: auto",
         ]);
-
-        // Backdrop
         this.addStyle(".offcanvas-backdrop", [
             "position: fixed",
             "top: 0",
@@ -81,7 +71,6 @@ export class OffcanvasStyles {
             "visibility: hidden",
             `transition: opacity ${CONFIG.TRANSITIONS.DURATION} ${CONFIG.TRANSITIONS.EASING}`,
         ]);
-
         this.addStyle(".offcanvas-backdrop.show", [
             "opacity: 1",
             "visibility: visible",
@@ -98,9 +87,7 @@ export class OffcanvasStyles {
             `padding: ${CONFIG.SPACING.PADDING}`,
             `border-bottom: 1px solid ${CONFIG.COLORS.BORDER}`,
         ]);
-
         this.addStyle(".offcanvas-title", ["margin: 0"]);
-
         this.addStyle(".offcanvas-close", [
             "background: transparent",
             "border: 0",
@@ -109,14 +96,11 @@ export class OffcanvasStyles {
             "cursor: pointer",
             `padding: ${CONFIG.SPACING.CLOSE_PADDING}`,
         ]);
-
         this.addStyle(".offcanvas-close:hover", ["opacity: 1"]);
     }
 
     addDirectionalStyles() {
         const { CONFIG } = OffcanvasStyles;
-
-        // Configuration des directions avec leurs propriétés spécifiques
         const directions = {
             start: {
                 position: ["top: 0", "left: 0"],
@@ -152,7 +136,6 @@ export class OffcanvasStyles {
             },
         };
 
-        // Application des styles directionnels
         Object.entries(directions).forEach(([direction, config]) => {
             this.addStyle(`.offcanvas-${direction}`, [
                 ...config.position,
@@ -163,43 +146,40 @@ export class OffcanvasStyles {
     }
 
     addUtilityStyles() {
-        // Verrouillage du scroll
         this.addStyle("body.offcanvas-lock-scroll", ["overflow: hidden"]);
     }
 
     /**
-     * Méthode utilitaire pour ajouter des styles de manière cohérente
-     * @param {string} selector - Sélecteur CSS
-     * @param {string[]} declarations - Tableau des déclarations CSS
+     * Utility method for adding styles consistently
+     * @param {string} selector - CSS selector
+     * @param {string[]} declarations - Array of CSS declarations
      */
     addStyle(selector, declarations) {
         this.styleManager.addDeclarationsWithMediaQuery(
             [],
             selector,
-            new Set(declarations)
+            new Set(declarations),
         );
     }
 
     /**
-     * Méthode pour personnaliser la configuration
-     * @param {Object} customConfig - Configuration personnalisée
-     * @returns {OffcanvasStyles} Instance pour chaînage
+     * Method to customize the configuration
+     * @param {Object} customConfig - Custom configuration
+     * @returns {OffcanvasStyles} Instance for chaining
      */
     static withConfig(customConfig) {
-        // Fusion profonde de la configuration
         const mergedConfig = this.deepMerge(this.CONFIG, customConfig);
 
-        // Retour d'une classe avec la nouvelle configuration
         return class extends OffcanvasStyles {
             static CONFIG = mergedConfig;
         };
     }
 
     /**
-     * Utilitaire pour fusion profonde d'objets
-     * @param {Object} target - Objet cible
-     * @param {Object} source - Objet source
-     * @returns {Object} Objet fusionné
+     * Utility for deep object merging
+     * @param {Object} target - Target object
+     * @param {Object} source - Source object
+     * @returns {Object} Merged object
      */
     static deepMerge(target, source) {
         const result = { ...target };
@@ -220,22 +200,21 @@ export class OffcanvasStyles {
     }
 
     /**
-     * Méthode pour obtenir la configuration actuelle
-     * @returns {Object} Configuration actuelle
+     * Method to get the current configuration
+     * @returns {Object} Current configuration
      */
     getConfig() {
         return OffcanvasStyles.CONFIG;
     }
 
     /**
-     * Méthode pour mettre à jour dynamiquement certains styles
-     * @param {string} property - Propriété à mettre à jour
-     * @param {string} value - Nouvelle valeur
+     * Method to dynamically update certain styles
+     * @param {string} property - Property to update
+     * @param {string} value - New value
      */
     updateProperty(property, value) {
-        // Cette méthode pourrait être étendue pour permettre des mises à jour dynamiques
         console.warn(
-            "updateProperty: Méthode à implémenter selon les besoins spécifiques"
+            "updateProperty: Method to be implemented according to specific needs",
         );
     }
 }

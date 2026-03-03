@@ -9,16 +9,13 @@ export class LRUCache {
     }
 
     get(key) {
-        // SUPPRIMÉ la réorganisation automatique qui cause les lags
         return this.cache.get(key);
     }
 
     set(key, value) {
-        // Si la clé existe déjà, la supprimer pour la remettre à la fin
         if (this.cache.has(key)) {
             this.cache.delete(key);
         } else if (this.cache.size >= this.maxSize) {
-            // Supprimer le plus ancien (premier élément)
             const firstKey = this.cache.keys().next().value;
             this.cache.delete(firstKey);
         }

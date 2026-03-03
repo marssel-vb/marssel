@@ -1,7 +1,7 @@
-// # Commande de base
+// # CBasic command
 // node node_modules/@marssel-vb/marssel/generators/generate-icons-manifest.mjs
 
-// # Avec options personnalisées
+// # With custom options
 // node node_modules/@marssel-vb/marssel/generators/generate-icons-manifest.mjs --icons public/images/icons --manifest public/js/icons-manifest.json --pretty
 
 // node generate-icons-manifest.js [--icons path] [--manifest path] [--pretty]
@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// 🔍 Trouver la racine du projet
+// 🔍 Find the root of the project
 function findProjectRoot(startDir) {
     const rootMarkers = ["package.json", "composer.json", "public"];
     let currentDir = startDir;
@@ -37,7 +37,7 @@ function findProjectRoot(startDir) {
 
 const projectRoot = findProjectRoot(process.cwd());
 
-// 🧾 Analyse des arguments CLI
+// 🧾 Analysis of CLI arguments
 function parseArgs() {
     const args = process.argv.slice(2);
     const config = { pretty: false };
@@ -59,7 +59,7 @@ function parseArgs() {
     return config;
 }
 
-// 📁 Configuration finale
+// 📁 Final configuration
 function getConfig() {
     const args = parseArgs();
     const defaults = {
@@ -81,11 +81,11 @@ function getConfig() {
         pretty: args.pretty,
     };
 
-    console.log("📂 Racine du projet détectée:", projectRoot);
+    console.log("📂 Project root detected:", projectRoot);
     return config;
 }
 
-// 📦 Extraction SVG
+// 📦SVG extraction
 function extractSvg(filePath) {
     const raw = fs.readFileSync(filePath, "utf8");
     return raw.replace(/\s+/g, " ").trim();
@@ -97,15 +97,15 @@ async function loadDefaultIcons() {
         const { icons } = await import("./default-icons.mjs");
         return icons || {};
     } catch (e) {
-        console.warn("⚠️ Icônes par défaut introuvables :", e.message);
+        console.warn("⚠️ Default icons not found:", e.message);
         return {};
     }
 }
 
-// 🔁 Traitement d'un dossier d'icônes
+// 🔁 Processing a folder of icons
 function processIconDir(dir, type, manifest) {
     if (!fs.existsSync(dir)) {
-        console.log(`📁 Création du dossier : ${dir}`);
+        console.log(`📁 Creating the folder : ${dir}`);
         fs.mkdirSync(dir, { recursive: true });
         return;
     }
@@ -133,8 +133,8 @@ async function generateIconsManifest() {
     try {
         const config = getConfig();
         console.log("\n📁 Configuration:");
-        console.log(`   📌 Répertoire icônes : ${config.customIconsDir}`);
-        console.log(`   📝 Fichier manifeste : ${config.manifestPath}`);
+        console.log(`   📌 Icons directory : ${config.customIconsDir}`);
+        console.log(`   📝 Manifest file : ${config.manifestPath}`);
 
         const manifestDir = path.dirname(config.manifestPath);
         if (!fs.existsSync(manifestDir))
@@ -143,7 +143,7 @@ async function generateIconsManifest() {
         const manifest = { ...(await loadDefaultIcons()) };
 
         for (const type of ["outline", "solid", "duotone"]) {
-            console.log(`\n🔍 Traitement des icônes ${type}...`);
+            console.log(`\n🔍 Icon processing ${type}...`);
             const dir = path.join(config.customIconsDir, type);
             processIconDir(dir, type, manifest);
         }
@@ -153,11 +153,11 @@ async function generateIconsManifest() {
             JSON.stringify(manifest, null, config.pretty ? 2 : 0),
         );
 
-        console.log("\n✨ Manifest généré avec succès !");
-        console.log(`   🔢 Total icônes : ${Object.keys(manifest).length}`);
-        console.log(`   📄 Écrit dans : ${config.manifestPath}`);
+        console.log("\n✨ Manifest generated successfully !");
+        console.log(`   🔢 Total icons : ${Object.keys(manifest).length}`);
+        console.log(`   📄 Written to : ${config.manifestPath}`);
     } catch (e) {
-        console.error("\n❌ Erreur durant la génération :", e);
+        console.error("\n❌ Error during generation :", e);
         process.exit(1);
     }
 }

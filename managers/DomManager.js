@@ -6,7 +6,6 @@ import {
 } from "../utils/helpers.js";
 import { LRUCache } from "../utils/LRUCache.js";
 
-// Pré-compilation des regex optimisées
 const REGEXES = {
     STYLE_CLASS: /-\[|^\[.*\]-|---\[/,
     COMPACT_STYLE: /^(.*?)\](?:-|:)([\w-:()[\]]+)(!)?$/,
@@ -17,12 +16,8 @@ const REGEXES = {
     CHILD_SELECTOR: /^(.+)>([a-zA-Z0-9-:]+)(!)?$/,
     CHILD_SELECTOR_WITH_BREAKPOINTS:
         /^(?:(.*?)--)?([a-z-]+)-\[(.*)\]>([a-zA-Z0-9-:]+)(!)?$/,
-
-    // ✅ MODIFIÉ : Utilise (.*) pour capturer toute la valeur
     CHILD_STYLE_WITH_IMPORTANT:
         /([a-z0-9-]+)-\[(.*)\](!?)>([a-zA-Z0-9-:]+(?::[a-zA-Z0-9-:]+)*)(!?)/,
-
-    // ✅ MODIFIÉ : Utilise (.*) (greedy) pour capturer tout le groupe [a+b] avant le >
     GROUP_CHILD_SELECTOR:
         /^\[(.*?)\]>([a-zA-Z0-9-:]+(?::[a-zA-Z0-9-:]+)*)(!)?$/,
     GROUP_CHILD_AFTER_BRACKET:
@@ -32,7 +27,6 @@ const REGEXES = {
     ROOT_GROUP: /^\[(.*)\](!)?$/,
 };
 
-// Cache pour les sélecteurs générés
 const selectorCache = new LRUCache(200);
 const classCache = new LRUCache(300);
 
@@ -42,19 +36,12 @@ export class DomManager {
         this.props = marssel.constructor.properties;
         this.colorRegex = marssel.constructor.COLOR_REGEX;
         this.criticalsSelectors = marssel.constructor.CRITICAL_SELECTORS;
-
-        // Pool de déclarations réutilisables
         this.declarationPool = [];
         this.poolIndex = 0;
-
-        // Batch processing
         this.pendingClasses = new Set();
         this.processingScheduled = false;
-
         this.processedElements = new WeakSet();
         this.processedElementsCount = 0;
-
-        // Cache des classes déjà traitées
         this.processedClasses = new Set();
     }
 
@@ -65,14 +52,11 @@ export class DomManager {
         let classesModified = false;
         const classesToAdd = new Set();
 
-        // Parcourir toutes les classes de l'élément
         for (const className of classList) {
             const baseClass = this.extractBaseClass(className);
 
             if (baseClass && baseClass !== className) {
-                // Vérifier si la classe de base n'existe pas déjà
                 if (!classList.contains(baseClass)) {
-                    // Vérifier si la classe de base est appropriée pour cet élément
                     if (
                         this.isBaseClassAppropriateForElement(
                             baseClass,
@@ -86,11 +70,9 @@ export class DomManager {
             }
         }
 
-        // Ajouter les classes de base manquantes
         if (classesModified) {
             classesToAdd.forEach((baseClass) => {
                 element.classList.add(baseClass);
-                // AJOUT : Traiter immédiatement la classe de base ajoutée
                 this.pendingClasses.add(baseClass);
             });
         }
@@ -104,14 +86,9 @@ export class DomManager {
 
     isBaseClassAppropriateForElement(baseClass, element) {
         const tagName = element.tagName.toLowerCase();
-
-        // Liste des éléments qui ne devraient pas recevoir certaines classes de base
         const restrictedElements = ["html", "body", "head"];
 
-        // Si c'est un élément restreint, on évite d'ajouter des classes de composants
         if (restrictedElements.includes(tagName)) {
-            // Autoriser seulement les classes qui sont clairement des utilitaires génériques
-            // et non des composants spécifiques
             const componentClasses = [
                 "btn",
                 "card",
@@ -122,13 +99,10 @@ export class DomManager {
                 "dropdown",
             ];
 
-            // Vérifier si la classe de base ressemble à  un composant
             const isComponentClass = componentClasses.some(
                 (comp) =>
                     baseClass.startsWith(comp) || baseClass.includes(comp),
             );
-
-            // Vérifier aussi les patterns numériques (btn-1, card-2, etc.)
             const hasNumericSuffix = /^[a-z]+-\d+$/.test(baseClass);
 
             if (isComponentClass || hasNumericSuffix) {
@@ -140,17 +114,13 @@ export class DomManager {
     }
 
     extractBaseClass(className) {
-        // Early returns pour les cas simples
         const tripleIndex = className.indexOf("---");
         if (tripleIndex === -1) return null;
 
         const componentPart = className.slice(0, tripleIndex);
-
-        // indexOf est plus rapide que split pour un seul séparateur
         const doubleIndex = componentPart.indexOf("--");
         if (doubleIndex === -1) return componentPart;
 
-        // àâ€°viter split + slice, utiliser lastIndexOf
         const lastDoubleIndex = componentPart.lastIndexOf("--");
         return componentPart.slice(lastDoubleIndex + 2);
     }
@@ -177,7 +147,6 @@ export class DomManager {
                 mutation.type === "attributes" &&
                 mutation.attributeName === "class"
             ) {
-                // Retirer l'élément du cache pour retraitement
                 this.processedElements.delete(mutation.target);
                 elementsToProcess.add(mutation.target);
                 hasChanges = true;
@@ -192,7 +161,6 @@ export class DomManager {
         }
 
         if (hasChanges) {
-            // Traitement différé pour éviter les multiples appels
             if (!this.processingScheduled) {
                 this.processingScheduled = true;
                 requestAnimationFrame(() => {
@@ -208,12 +176,7 @@ export class DomManager {
 
     processAllElements() {
         const elements = document.querySelectorAll("*");
-
-        // Identifier et traiter d'abord les éléments critiques
         const criticalElements = this.getCriticalElements();
-        const regularElements = [];
-
-        // Priorité aux éléments visibles d'abord
         const viewportHeight = window.innerHeight;
         const visibleCriticalElements = [];
         const hiddenCriticalElements = [];
@@ -241,24 +204,20 @@ export class DomManager {
             }
         });
 
-        // Traite d'abord les éléments critiques visibles
         if (visibleCriticalElements.length > 0) {
-            this.processElementsBatch(visibleCriticalElements, 0, true); // true = critique
+            this.processElementsBatch(visibleCriticalElements, 0, true);
         }
 
-        // Puis les éléments visibles normaux
         if (visibleElements.length > 0) {
             this.processElementsBatch(visibleElements, 0);
         }
 
-        // Puis les éléments critiques cachés
         if (hiddenCriticalElements.length > 0) {
             setTimeout(() => {
                 this.processElementsBatch(hiddenCriticalElements, 0, true);
             }, 25);
         }
 
-        // Enfin les éléments cachés
         if (hiddenElements.length > 0) {
             setTimeout(() => {
                 this.processElementsBatch(hiddenElements, 0);
@@ -266,7 +225,6 @@ export class DomManager {
         }
     }
 
-    // Nouvelle méthode pour identifier les éléments critiques
     getCriticalElements() {
         const criticalElements = [];
 
@@ -275,7 +233,7 @@ export class DomManager {
                 const elements = document.querySelectorAll(selector);
                 criticalElements.push(...elements);
             } catch (e) {
-                // Ignorer les erreurs de sélecteur
+                //
             }
         });
 
@@ -307,18 +265,15 @@ export class DomManager {
             }
         });
 
-        // Traitement immédiat des éléments critiques visibles
         visibleCriticalElements.forEach((element) => {
             this.processElement(element);
         });
 
-        // Traiter immédiatement leurs styles
         if (visibleCriticalElements.length > 0) {
             this.processPendingClasses();
             this.marssel.styleManager.updateStyles();
         }
 
-        // Puis traiter les éléments réguliers visibles
         visibleRegularElements.forEach((element) => {
             this.processElement(element);
         });
@@ -331,7 +286,6 @@ export class DomManager {
         const batchSize = isCritical ? 50 : 100;
         const endIndex = Math.min(startIndex + batchSize, elements.length);
 
-        // Traiter le batch
         for (let i = startIndex; i < endIndex; i++) {
             this.processElement(elements[i]);
         }
@@ -341,7 +295,6 @@ export class DomManager {
             this.marssel.styleManager.updateStyles();
         }
 
-        // Optimisation: Utiliser requestIdleCallback pour les non-critiques
         if (endIndex < elements.length) {
             const scheduleNext = () => {
                 this.processElementsBatch(elements, endIndex, isCritical);
@@ -362,10 +315,7 @@ export class DomManager {
     processElement(element) {
         if (!(element instanceof HTMLElement)) return;
 
-        // AJOUT : Vérifier si l'élément est critique AVANT tout traitement
         const isCritical = this.isCriticalElement(element);
-
-        // Ajouter automatiquement les classes de base AVANT le traitement
         this.autoAddBaseClasses(element);
 
         const classList = element.classList;
@@ -374,14 +324,12 @@ export class DomManager {
         const stylingClasses = this.filterStylingClasses(classList);
         if (!stylingClasses.length) return;
 
-        // MODIFICATION : Si critique OU si l'élément a .no-lazy, traiter immédiatement
         if (isCritical || element.classList.contains("no-lazy")) {
             this.addClassesToPending(stylingClasses);
             this.processPendingClasses();
             return;
         }
 
-        // MODIFICATION : Vérifier aussi les parents pour .no-lazy
         let parent = element.parentElement;
         while (parent) {
             if (parent.classList && parent.classList.contains("no-lazy")) {
@@ -398,12 +346,10 @@ export class DomManager {
             this.addClassesToPending(stylingClasses);
         }
 
-        // Traiter immédiatement les classes en attente
         this.processPendingClasses();
     }
 
     isCriticalElement(element) {
-        // Vérifier directement avec les sélecteurs statiques
         return this.criticalsSelectors.some((selector) => {
             try {
                 return element.matches(selector);
@@ -428,7 +374,6 @@ export class DomManager {
             return classCache.get(className);
         }
 
-        // Tests plus rapides d'abord (opérateurs simples)
         const isStyling =
             className.includes("-") &&
             (className.includes("-[") ||
@@ -437,7 +382,6 @@ export class DomManager {
                 className.includes("]:") ||
                 className.includes("--"));
 
-        // Seulement mettre en cache si >= 10 caractères (éviter pollution cache)
         if (className.length >= 10) {
             classCache.set(className, isStyling);
         }
@@ -449,7 +393,6 @@ export class DomManager {
         this.marssel.styleManager.lazyElements.set(element, stylingClasses);
         this.marssel.styleManager.lazyObserver.observe(element);
 
-        // Vérification optimisée du viewport
         if (this.isInInitialViewport(element)) {
             this.addClassesToPending(stylingClasses);
             this.marssel.styleManager.lazyElements.delete(element);
@@ -480,12 +423,10 @@ export class DomManager {
     }
 
     processClassOptimized(className) {
-        // Vérifier si la classe a déjà été traitée
         if (this.processedClasses.has(className)) {
             return;
         }
 
-        // Essayer d'abord le traitement des pseudo-classes compactes
         if (this.processPseudoCompactStyles(className)) {
             return;
         }
@@ -496,7 +437,6 @@ export class DomManager {
             return;
         }
 
-        // 1. ✅ PRIORITÉ MAX : [styles]>enfant:pseudo (le cas problématique)
         if (className.startsWith("[") && className.includes("]>")) {
             const groupChildMatch = className.match(
                 REGEXES.GROUP_CHILD_AFTER_BRACKET,
@@ -507,7 +447,6 @@ export class DomManager {
             }
         }
 
-        // 2. Gérer [styles>enfant] (> DANS les crochets)
         if (
             className.startsWith("[") &&
             className.includes(">") &&
@@ -522,13 +461,12 @@ export class DomManager {
             }
         }
 
-        // 3. Gérer les groupes racine [style+style]! (sans > et sans :)
         const rootGroupMatch = className.match(REGEXES.ROOT_GROUP);
         if (
             rootGroupMatch &&
-            !className.includes("]:") && // NE PAS contenir de pseudo-classes parent (ex: [styles]:hover)
-            !className.includes("]>") && // NE PAS contenir de sélecteur enfant (ex: [styles]>span)
-            !className.includes(">") // NE PAS contenir de sélecteur enfant imbriqué (ex: [style>span])
+            !className.includes("]:") &&
+            !className.includes("]>") &&
+            !className.includes(">")
         ) {
             const [, stylesGroup, importantFlag] = rootGroupMatch;
             const isImportant = Boolean(importantFlag);
@@ -536,7 +474,6 @@ export class DomManager {
             return;
         }
 
-        // Routage optimisé basé sur les caractères présents
         if (className.startsWith("[") && className.includes("]:")) {
             this.processGroupPseudoClass(className);
         } else if (className.includes("---[")) {
@@ -549,14 +486,12 @@ export class DomManager {
             this.processClassName(className);
         }
 
-        // Marquer comme traitée
         this.processedClasses.add(className);
-
         this.marssel.styleManager.loadedClasses.add(className);
     }
 
     /**
-     * Traite les groupes de styles racine avec breakpoints et/ou pseudo-classes
+     * Treats root style groups with breakpoints and/or pseudo-classes
      * Ex: lg--[mb-[0]+text-align-[center]], :hover[c-[red]]!
      */
     processBreakpointRootGroup(match) {
@@ -575,8 +510,6 @@ export class DomManager {
 
         const isGroupImportant =
             Boolean(importantBeforeChild) || Boolean(importantAfterPseudo);
-
-        // Extraire pseudo-classes du childSelector si présent
         let pseudoModifier = null;
         let cleanChildSelector = childSelector;
 
@@ -589,7 +522,6 @@ export class DomManager {
         const escapedClassName = fullClassName.replace(/[[\]+!:>.]/g, "\\$&");
         let selector = `.${escapedClassName}`;
 
-        // Ajouter le sélecteur enfant et pseudo si présents
         if (cleanChildSelector) {
             selector += ` > ${cleanChildSelector}`;
             if (pseudoModifier) {
@@ -652,8 +584,6 @@ export class DomManager {
 
         const { cleanStylesBlock, pseudoModifier, isImportant } =
             this.parsePseudoModifier(stylesBlock);
-
-        // ✅ AJOUT : Vérifier si ]! apparaît avant >
         const hasImportantBeforeChild = /\]!>/.test(className);
         const finalImportant = isImportant || hasImportantBeforeChild;
 
@@ -673,7 +603,7 @@ export class DomManager {
             component,
             pseudoModifier,
             breakpoints,
-            finalImportant, // ✅ Passer finalImportant au lieu de isImportant
+            finalImportant,
         );
 
         if (declarations.size > 0) {
@@ -700,16 +630,12 @@ export class DomManager {
     }
 
     parsePseudoModifier(stylesBlock) {
-        // Nouvelle regex pour gérer ]!:pseudo, ]:pseudo, ]-pseudo et ]!
-        // Cherche ] suivi optionnellement de ! suivi de : ou -
         const match = stylesBlock.match(/\](!?)([-:])(.+)$/);
 
         if (match) {
             const closeBracketIndex = match.index;
-            const innerImportant = match[1] === "!"; // Le ! entre ] et :
+            const innerImportant = match[1] === "!";
             let pseudo = match[3];
-
-            // Gérer le cas où le pseudo finit par ! (ex: :hover!)
             let isOuterImportant = false;
             if (pseudo.endsWith("!")) {
                 isOuterImportant = true;
@@ -717,13 +643,12 @@ export class DomManager {
             }
 
             return {
-                cleanStylesBlock: stylesBlock.slice(0, closeBracketIndex + 1), // Inclure le ]
+                cleanStylesBlock: stylesBlock.slice(0, closeBracketIndex + 1),
                 pseudoModifier: pseudo,
                 isImportant: innerImportant || isOuterImportant,
             };
         }
 
-        // Cas fallback : [styles]! (important sans pseudo)
         if (stylesBlock.endsWith("!")) {
             return {
                 cleanStylesBlock: stylesBlock.slice(0, -1),
@@ -732,7 +657,6 @@ export class DomManager {
             };
         }
 
-        // Cas standard : [styles]
         return {
             cleanStylesBlock: stylesBlock,
             pseudoModifier: null,
@@ -745,7 +669,6 @@ export class DomManager {
     }
 
     parseStylesList(stylesBlock) {
-        // Détecter automatiquement le séparateur utilisé
         const separator = stylesBlock.includes("__") ? "__" : "+";
         return stylesBlock.slice(1, -1).split(separator).filter(Boolean);
     }
@@ -770,9 +693,7 @@ export class DomManager {
         return selector;
     }
 
-    // Ajouter cette méthode dans DomManager.js :
     processPseudoCompactStyles(className) {
-        // Regex pour capturer le format avec pseudo-classes
         const pseudoCompactRegex = /^([\w-]+)---\[(.*?)\]([:-])([\w:-]+)$/;
         const match = className.match(pseudoCompactRegex);
 
@@ -814,7 +735,6 @@ export class DomManager {
     generateSelector(base, pseudoModifier) {
         if (!pseudoModifier) return `.${base}`;
 
-        // Séparer les pseudo-classes/éléments par :
         const pseudoParts = pseudoModifier.split(":");
 
         return `.${base}${pseudoParts.map((p) => `:${p}`).join("")}`;
@@ -837,7 +757,7 @@ export class DomManager {
                     escapedComponent,
                     pseudoModifier,
                     breakpoints,
-                    isImportant, // Passer isImportant ici
+                    isImportant,
                 );
                 continue;
             }
@@ -845,7 +765,6 @@ export class DomManager {
             const match = style.match(REGEXES.PROP_VALUE);
             if (match) {
                 const [, property, value, importantFlag] = match;
-                // Combiner isImportant du bloc avec celui du style individuel
                 const styleIsImportant = isImportant || Boolean(importantFlag);
                 this.addStyleDeclaration(
                     declarations,
@@ -859,32 +778,26 @@ export class DomManager {
 
     processChildStyle(
         style,
-        escapedComponent, // Attention: ici on reçoit souvent le fullClassName brut
+        escapedComponent,
         pseudoModifier,
         breakpoints,
         isImportant = false,
     ) {
-        // Utiliser la regex mise à jour (supporte : et 0-9 dans l'enfant)
         const childMatch = style.match(REGEXES.CHILD_STYLE_WITH_IMPORTANT);
         if (!childMatch) return;
 
         const [, property, value, propertyImportant, child, childImportant] =
             childMatch;
-
-        // 1. Génération du sélecteur parent
-        // Si escapedComponent contient déjà des crochets (c'est une classe brute), on l'échappe
         let baseSelector;
         if (escapedComponent.includes("[")) {
             baseSelector = "." + escapedComponent.replace(/[[\]+!:>]/g, "\\$&");
         } else {
-            // C'est un composant simple (ex: "btn")
             baseSelector = this.generateSelector(
                 escapedComponent,
                 pseudoModifier,
             );
         }
 
-        // Ajouter le pseudo-modifier si on est dans le cas d'une classe brute complexe
         if (escapedComponent.includes("[") && pseudoModifier) {
             const parts = pseudoModifier.split(":");
             baseSelector += parts.map((p) => `:${p}`).join("");
@@ -914,7 +827,6 @@ export class DomManager {
         this.returnDeclarationSet(childDeclarations);
     }
 
-    // Pool de Sets pour éviter les allocations répétées
     getDeclarationSet() {
         if (this.declarationPool.length > this.poolIndex) {
             const set = this.declarationPool[this.poolIndex++];
@@ -973,11 +885,9 @@ export class DomManager {
             parts[0],
         );
 
-        // Extraire le pseudo-sélecteur s'il existe
         const pseudoMatch = className.match(/:([a-z-_]+(?::[a-z-_]+)*)$/);
         const pseudoSelector = pseudoMatch ? `:${pseudoMatch[1]}` : "";
 
-        // àâ€°chapper tous les caractères spéciaux y compris :
         const escapedClassName = className.replace(/[[\]+:]/g, "\\$&");
         const selector = `.${escapedClassName}${pseudoSelector}`;
         const declarations = this.getDeclarationSet();
@@ -991,7 +901,7 @@ export class DomManager {
             const parsed = parseClassName(adjustedPart);
 
             if (parsed) {
-                const styleIsImportant = isImportant || parsed.isImportant; // Utiliser parsed.isImportant
+                const styleIsImportant = isImportant || parsed.isImportant;
                 this.addStyleDeclaration(
                     declarations,
                     parsed.property,
@@ -1047,12 +957,10 @@ export class DomManager {
             return;
         }
 
-        // Traitement des styles multiples
         const styleClasses = stylesPart.split("+").filter(Boolean);
         for (const styleClass of styleClasses) {
             const parsed = parseClassPart(componentName, styleClass);
             if (parsed) {
-                // Fusionner isImportant avec celui du parsed
                 const finalIsImportant = isImportant || parsed.isImportant;
                 const parsedWithImportant = {
                     ...parsed,
@@ -1080,7 +988,6 @@ export class DomManager {
     processSingleStyle(className, isImportant = false) {
         const parsed = parseClassName(className);
         if (parsed) {
-            // Fusionner isImportant avec celui du parsed
             const finalIsImportant = isImportant || parsed.isImportant;
             const parsedWithImportant = {
                 ...parsed,
@@ -1091,7 +998,6 @@ export class DomManager {
     }
 
     processChildSelectorClass(className, isImportant = false) {
-        // 1. Essayer le pattern [groupe]>enfant (ex: [fs-[40px]+c-[red]]>span)
         const groupMatch = className.match(REGEXES.GROUP_CHILD_SELECTOR);
         if (groupMatch) {
             return this.processGroupChildSelector(
@@ -1101,7 +1007,6 @@ export class DomManager {
             );
         }
 
-        // 2. Sinon, essayer le pattern standard prop-[val]>enfant
         const match = className.match(REGEXES.CHILD_SELECTOR_WITH_BREAKPOINTS);
         if (!match) return false;
 
@@ -1118,7 +1023,6 @@ export class DomManager {
             : [];
 
         const styleIsImportant = isImportant || Boolean(importantFlag);
-        // ✅ IMPORTANT : On échappe aussi les deux-points (:)
         const escapedClassName = className.replace(/[[\]>!:]/g, "\\$&");
         const selector = `.${escapedClassName} > ${childElement}`;
         const declarations = this.getDeclarationSet();
@@ -1140,16 +1044,13 @@ export class DomManager {
     }
 
     /**
-     * Traite : [fs-[40px]+c-[green]]>span et [fs-[40px]+c-[green]]>span:hover
-     * Le > est APRÈS les crochets
+     * Handles: [fs-[40px]+c-[green]]>span and [fs-[40px]+c-[green]]>span:hover
+     * The > is AFTER the brackets
      */
     processGroupChildSelector(match, className, isImportant = false) {
         const [, stylesGroup, childSelector, importantFlag] = match;
         const styleIsImportant = isImportant || Boolean(importantFlag);
-
         const properties = this.splitPropertiesGroup(stylesGroup);
-
-        // Séparer styles parent et enfant
         const parentStyles = [];
         const childStyles = [];
 
@@ -1164,7 +1065,6 @@ export class DomManager {
         const baseClassName = className.split(">")[0];
         const escapedBase = baseClassName.replace(/[[\]+!]/g, "\\$&");
 
-        // 1. Traiter styles du PARENT
         if (parentStyles.length > 0) {
             const parentSelector = `.${escapedBase}`;
             const parentDeclarations = this.getDeclarationSet();
@@ -1194,7 +1094,6 @@ export class DomManager {
             this.returnDeclarationSet(parentDeclarations);
         }
 
-        // 2. Traiter styles de l'ENFANT
         const finalSelector = `.${escapedBase} > ${childSelector}`;
         const childDeclarations = this.getDeclarationSet();
 
@@ -1229,24 +1128,17 @@ export class DomManager {
     }
 
     /**
-     * Traite : [fs-[40px]+c-[green]>span] et [fs-[40px]+c-[green]>span]:hover
-     * Le > est DANS les crochets
+     * Handles: [fs-[40px]+c-[green]>span] et [fs-[40px]+c-[green]>span]:hover
+     * The > is INSIDE the brackets
      */
     processInnerChildSelector(match, className) {
         const [, innerContent, parentPseudo, importantFlag] = match;
-
-        // ✅ MODIF : Détecter le ! avant le : dans le className original
         const hasImportantBeforePseudo = /\]!:/.test(className);
         const isImportant = Boolean(importantFlag) || hasImportantBeforePseudo;
-
-        // Séparer le contenu avant et après le >
         const lastChildIndex = innerContent.lastIndexOf(">");
         const stylesGroup = innerContent.slice(0, lastChildIndex);
         const childSelector = innerContent.slice(lastChildIndex + 1);
-
         const properties = this.splitPropertiesGroup(stylesGroup);
-
-        // Séparer styles parent et enfant
         const parentStyles = [];
         const childStyles = [];
 
@@ -1260,11 +1152,9 @@ export class DomManager {
 
         const escapedBase = className.replace(/[[\]+!:>]/g, "\\$&");
 
-        // 1. Traiter styles du PARENT
         if (parentStyles.length > 0) {
             let parentSelector = `.${escapedBase}`;
 
-            // Ajouter le pseudo si présent
             if (parentPseudo) {
                 const parts = parentPseudo.split(":");
                 parentSelector += parts.map((p) => `:${p}`).join("");
@@ -1297,10 +1187,8 @@ export class DomManager {
             this.returnDeclarationSet(parentDeclarations);
         }
 
-        // 2. Traiter styles de l'ENFANT
         let childFullSelector = `.${escapedBase} > ${childSelector}`;
 
-        // Ajouter le pseudo au parent si présent
         if (parentPseudo) {
             const parts = parentPseudo.split(":");
             childFullSelector = `.${escapedBase}${parts
@@ -1341,41 +1229,30 @@ export class DomManager {
     }
 
     /**
-     * Traite : [fs-[40px]+c-[green]]>span:hover
-     * Le > est APRÈS les crochets
+     * Handles : [fs-[40px]+c-[green]]>span:hover
+     * The > is AFTER the brackets
      */
     processGroupChildAfterBracket(match, className) {
         const [, stylesGroup, childSelector, importantFlag] = match;
         const isImportant = Boolean(importantFlag);
-
-        // Parser les styles du groupe
         const properties = this.splitPropertiesGroup(stylesGroup);
-
-        // Construire le sélecteur parent (classe échappée)
         const escapedBase = className.replace(/[[\]+!:>]/g, "\\$&");
         const baseSelector = `.${escapedBase}`;
-
-        // Séparer le sélecteur enfant et ses pseudo-classes
         const childParts = childSelector.split(":");
-        const childElement = childParts[0]; // L'élément enfant (ex: "span")
-        const childPseudo = childParts.slice(1).filter((p) => p); // Les pseudo-classes (ex: ["hover"])
+        const childElement = childParts[0];
+        const childPseudo = childParts.slice(1).filter((p) => p);
 
-        // Construire le sélecteur complet avec les pseudo-classes sur l'enfant
         let childFullSelector;
         if (childPseudo.length > 0) {
-            // Le pseudo s'applique à l'enfant : .parent > span:hover
             const pseudoString = childPseudo.map((p) => `:${p}`).join("");
             childFullSelector = `${baseSelector} > ${childElement}${pseudoString}`;
         } else {
-            // Pas de pseudo-classe
             childFullSelector = `${baseSelector} > ${childElement}`;
         }
 
         const childDeclarations = this.getDeclarationSet();
 
-        // Ajouter tous les styles à l'enfant
         for (const prop of properties) {
-            // Gérer les styles enfants explicites s'il y en a (ceux avec >)
             if (prop.includes(">")) {
                 const childMatch = prop.match(
                     REGEXES.CHILD_STYLE_WITH_IMPORTANT,
@@ -1401,7 +1278,6 @@ export class DomManager {
                     );
                 }
             } else {
-                // Styles normaux
                 const propMatch = prop.match(REGEXES.PROP_VALUE);
                 if (propMatch) {
                     const [, property, value, propImportant] = propMatch;
@@ -1430,10 +1306,7 @@ export class DomManager {
     }
 
     addStyleDeclaration(declarations, property, value, isImportant = false) {
-        // IMPORTANT : Convertir _ en espaces AVANT tout traitement
         const valueWithSpaces = value.replace(/_/g, " ");
-
-        // Traiter les références de thème dans la valeur
         const processedValue = valueWithSpaces.includes("var(--theme-")
             ? valueWithSpaces
             : this.processThemeInValue(valueWithSpaces);
@@ -1472,14 +1345,12 @@ export class DomManager {
                 break;
 
             case "bg-linear":
-                // MODIFICATION : Utiliser la fonction importée
                 cssDeclarationOrArray = `background: linear-gradient(${processGradientColors(
                     processedValue,
                 )})`;
                 break;
 
             case "bg-radial":
-                // MODIFICATION : Utiliser la fonction importée
                 cssDeclarationOrArray = `background: radial-gradient(${processGradientColors(
                     processedValue,
                 )})`;
@@ -1504,9 +1375,7 @@ export class DomManager {
                 );
         }
 
-        // VÃ©rifier si processGenericDeclaration a retournÃ© un tableau
         if (Array.isArray(cssDeclarationOrArray)) {
-            // Si oui, boucler sur chaque dÃ©claration (ex: "padding-left: 16px")
             for (const decl of cssDeclarationOrArray) {
                 if (isImportant && !decl.includes("!important")) {
                     declarations.add(decl + " !important");
@@ -1515,8 +1384,7 @@ export class DomManager {
                 }
             }
         } else {
-            // Sinon, c'est un string simple (comportement normal)
-            let cssDeclaration = cssDeclarationOrArray; // c'est un string
+            let cssDeclaration = cssDeclarationOrArray;
 
             if (isImportant && !cssDeclaration.includes("!important")) {
                 cssDeclaration += " !important";
@@ -1526,7 +1394,6 @@ export class DomManager {
     }
 
     processGradient(value) {
-        // Protéger temporairement les fonctions CSS (rgb, rgba, etc.)
         const functions = [];
         let protectedValue = value.replace(
             /(rgba?|hsla?|var)\([^)]+\)/gi,
@@ -1537,24 +1404,19 @@ export class DomManager {
             },
         );
 
-        // Maintenant traiter les couleurs hexadécimales
-        // Séparer par virgules et espaces tout en préservant la structure
         const parts = protectedValue.split(/([,\s]+)/);
 
         const processedParts = parts.map((part) => {
             const trimmed = part.trim();
 
-            // Ne rien faire avec les séparateurs
             if (!trimmed || /^[,\s]+$/.test(part)) {
                 return part;
             }
 
-            // Ne pas toucher aux placeholders de fonctions
             if (/^__FUNC_\d+__$/.test(trimmed)) {
                 return part;
             }
 
-            // Ne PAS toucher aux valeurs avec unités CSS
             if (
                 /(\d+\.?\d*)(deg|turn|rad|grad|px|em|rem|%|vh|vw|vmin|vmax)$/i.test(
                     trimmed,
@@ -1563,27 +1425,22 @@ export class DomManager {
                 return part;
             }
 
-            // Ne PAS toucher aux nombres purs
             if (/^\d+\.?\d*$/.test(trimmed)) {
                 return part;
             }
 
-            // Ne PAS toucher à "transparent"
             if (trimmed === "transparent") {
                 return part;
             }
 
-            // âœ… CORRECTION : Tester les couleurs hexadécimales (3 ou 6 caractères)
             const hexMatch = trimmed.match(/^([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/);
             if (hexMatch && !trimmed.startsWith("#")) {
                 const hex = hexMatch[1];
 
-                // Hex de 6 caractères : toujours convertir
                 if (hex.length === 6) {
                     return `#${hex.toUpperCase()}`;
                 }
 
-                // Hex de 3 caractères : vérifier s'il contient des lettres ou s'il s'agit d'un triplet identique
                 if (hex.length === 3) {
                     const hasLetters = /[A-Fa-f]/i.test(hex);
                     const threeIdentical =
@@ -1601,7 +1458,6 @@ export class DomManager {
 
         let result = processedParts.join("");
 
-        // Restaurer les fonctions CSS
         functions.forEach((func, index) => {
             result = result.replace(`__FUNC_${index}__`, func);
         });
@@ -1610,12 +1466,10 @@ export class DomManager {
     }
 
     processThemeInValue(value) {
-        // Vérifier si déjà transformé
         if (value.includes("var(--theme-")) {
             return value;
         }
 
-        // Remplacer theme-xxx par var(--theme-xxx) SEULEMENT si pas déjà fait
         return value.replace(/\btheme-([a-zA-Z0-9-]+)\b/g, "var(--theme-$1)");
     }
 
@@ -1638,9 +1492,7 @@ export class DomManager {
         }
     }
 
-    // Corriger processGenericDeclaration pour retourner la déclaration :
     processGenericDeclaration(property, value) {
-        // Gestion spéciale des propriétés de thèmes
         if (property.startsWith("theme-")) {
             const cssVar = `--${property}`;
             const themeValue =
@@ -1651,7 +1503,6 @@ export class DomManager {
         const cssProperty = this.props[property] || property.replace(/_/g, "-");
         const shouldProcessColor = this.isColorProperty(property);
 
-        // ✅ FIX: Appliquer addHashToHex sur TOUTES les valeurs après cleanValue
         let cssValue;
         if (shouldProcessColor) {
             cssValue = cleanValue(value);
@@ -1660,7 +1511,6 @@ export class DomManager {
         }
 
         if (Array.isArray(cssProperty)) {
-            // Pour les propriétés multiples, on les traite séparément
             return cssProperty.map((prop) => `${prop}: ${cssValue}`);
         } else {
             return `${cssProperty}: ${cssValue}`;
@@ -1676,17 +1526,14 @@ export class DomManager {
     }
 
     processColor(value) {
-        // Si la valeur contient déjà var(, la retourner telle quelle
         if (value.includes("var(")) {
             return value;
         }
 
-        // Si la valeur contient déjà rgb( ou rgba(, la retourner telle quelle
         if (/rgba?\(/.test(value)) {
             return value;
         }
 
-        // REMETTRE la transformation des thèmes pour les valeurs brutes
         if (value.includes("theme-")) {
             return value.replace(
                 /\btheme-([a-zA-Z0-9-]+)\b/g,
@@ -1720,13 +1567,11 @@ export class DomManager {
 
         const properties = this.splitPropertiesGroup(propertiesGroup);
         for (const prop of properties) {
-            // ✅ AJOUT : Gestion des enfants imbriqués
             if (prop.includes(">")) {
-                // Note: Ici on passe le pseudoSelector pour qu'il s'applique au parent
                 this.processChildStyle(
                     prop,
-                    className, // Utilise la classe entière comme base
-                    pseudoSelector, // Passe le pseudo (ex: hover)
+                    className,
+                    pseudoSelector,
                     [],
                     styleIsImportant,
                 );
@@ -1757,8 +1602,8 @@ export class DomManager {
     }
 
     /**
-     * Ã¢Å“â€¦ NOUVELLE MÃ‰THODE
-     * Traite les groupes de styles racine ex: [p-[10px]+c-[red]]!
+     * Processes root style groups e.g.: [p-[10px]+c-[red]]!
+     *
      */
     processRootGroup(stylesGroup, fullClassName, isGroupImportant = false) {
         const escapedClassName = fullClassName.replace(/[[\]+!:>.]/g, "\\$&");
@@ -1768,7 +1613,6 @@ export class DomManager {
         const properties = this.splitPropertiesGroup(stylesGroup);
 
         for (const prop of properties) {
-            // ✅ AJOUT : Gestion des enfants imbriqués dans le groupe
             if (prop.includes(">")) {
                 this.processChildStyle(
                     prop,

@@ -1,6 +1,4 @@
-// Styles par défaut pour le système de popover
 export class PopoverStyles {
-    // Configuration des styles centralisée
     static STYLES_CONFIG = {
         base: {
             selector: "[data-popover]",
@@ -34,49 +32,45 @@ export class PopoverStyles {
     }
 
     /**
-     * Initialise tous les styles du popover
+     * Initializes all popover styles
      * @private
      */
     initializeStyles() {
         const { base, visible } = PopoverStyles.STYLES_CONFIG;
-
-        // Applique les styles de base
         this.applyStyles(base);
-
-        // Applique les styles de visibilité
         this.applyStyles(visible);
     }
 
     /**
-     * Applique un ensemble de styles via le styleManager
-     * @param {Object} styleConfig - Configuration des styles {selector, declarations}
+     * Applies a set of styles via the styleManager
+     * @param {Object} styleConfig - Style configuration {selector, declarations}
      * @private
      */
     applyStyles({ selector, declarations }) {
         this.styleManager.addDeclarationsWithMediaQuery(
-            [], // Pas de media query
+            [],
             selector,
-            new Set(declarations)
+            new Set(declarations),
         );
     }
 
     /**
-     * Permet d'ajouter des styles personnalisés
-     * @param {string} selector - Sélecteur CSS
-     * @param {string[]} declarations - Déclarations CSS
-     * @param {string[]} mediaQueries - Media queries optionnelles
+     * Allows adding custom styles
+     * @param {string} selector - CSS selector
+     * @param {string[]} declarations - CSS declarations
+     * @param {string[]} mediaQueries - Optional media queries
      */
     addCustomStyles(selector, declarations, mediaQueries = []) {
         this.styleManager.addDeclarationsWithMediaQuery(
             mediaQueries,
             selector,
-            new Set(declarations)
+            new Set(declarations),
         );
     }
 
     /**
-     * Met à jour la configuration des styles de base
-     * @param {Object} newConfig - Nouvelle configuration
+     * Updates the basic style configuration
+     * @param {Object} newConfig - New configuration
      */
     static updateConfig(newConfig) {
         Object.assign(PopoverStyles.STYLES_CONFIG, newConfig);

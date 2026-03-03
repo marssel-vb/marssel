@@ -28,12 +28,12 @@ export class CarouselManager {
                     if (node.nodeType !== 1) continue;
 
                     const isCarousel = [...(node.classList || [])].some((cls) =>
-                        cls.startsWith("carousel-")
+                        cls.startsWith("carousel-"),
                     );
                     if (isCarousel) this.initializeCarousel(node);
 
                     node.querySelectorAll("[class*='carousel-']").forEach(
-                        (el) => this.initializeCarousel(el)
+                        (el) => this.initializeCarousel(el),
                     );
                 }
             }
@@ -53,7 +53,7 @@ export class CarouselManager {
                 this.touchStartX = e.touches[0].clientX;
                 setActiveFromEvent(e.target);
             },
-            { passive: true }
+            { passive: true },
         );
 
         document.addEventListener(
@@ -66,7 +66,7 @@ export class CarouselManager {
                 if (swipeDistance > 50) carousel.prevSlide();
                 else if (swipeDistance < -50) carousel.nextSlide();
             },
-            { passive: true }
+            { passive: true },
         );
 
         document.addEventListener(
@@ -77,7 +77,7 @@ export class CarouselManager {
                     .find(
                         (el) =>
                             el instanceof HTMLElement &&
-                            el.classList.contains("carousel-container")
+                            el.classList.contains("carousel-container"),
                     );
                 if (
                     container?.dataset.carouselId &&
@@ -86,7 +86,7 @@ export class CarouselManager {
                     this.activeCarousel = container.dataset.carouselId;
                 }
             },
-            true
+            true,
         );
     }
 
@@ -171,7 +171,7 @@ class Carousel {
                 btn.innerHTML = label;
                 btn.setAttribute(
                     "aria-label",
-                    `${className.includes("prev") ? "Previous" : "Next"} slide`
+                    `${className.includes("prev") ? "Previous" : "Next"} slide`,
                 );
                 this.container.appendChild(btn);
             }
@@ -188,7 +188,7 @@ class Carousel {
             this.container.appendChild(
                 Object.assign(document.createElement("div"), {
                     className: "carousel-indicators",
-                })
+                }),
             );
 
         container.innerHTML = "";
@@ -204,15 +204,15 @@ class Carousel {
     }
 
     startAutoplay() {
-        this.stopAutoplay(); // Clear existing
+        this.stopAutoplay();
         this.autoplayTimer = setInterval(() => this.nextSlide(), this.interval);
 
         if (this.container.dataset.pauseOnHover !== "false") {
             this.container.addEventListener("mouseenter", () =>
-                this.stopAutoplay()
+                this.stopAutoplay(),
             );
             this.container.addEventListener("mouseleave", () =>
-                this.startAutoplay()
+                this.startAutoplay(),
             );
         }
     }

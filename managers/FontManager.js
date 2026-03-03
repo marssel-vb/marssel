@@ -5,8 +5,6 @@ export class FontManager {
         this.marssel = marssel;
         this.config = this.initializeConfig();
         this.state = this.initializeState();
-
-        // Bind methods
         this.flushGoogleFonts = this.flushGoogleFonts.bind(this);
     }
 
@@ -46,8 +44,6 @@ export class FontManager {
 
     async loadManifest(retryCount = 0) {
         try {
-            console.log("🔍 Loading manifest from:", this.config.manifestUrl);
-
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 5000);
 
@@ -58,11 +54,6 @@ export class FontManager {
 
             clearTimeout(timeoutId);
 
-            console.log("📡 Response status:", response.status);
-            console.log("📡 Response headers:", [
-                ...response.headers.entries(),
-            ]);
-
             if (!response.ok) {
                 throw new Error(
                     `HTTP ${response.status}: ${response.statusText}`,
@@ -70,24 +61,14 @@ export class FontManager {
             }
 
             const responseText = await response.text();
-            console.log("📄 Response text length:", responseText.length);
-            console.log("📄 Response text:", responseText);
-            console.log("📄 First 100 chars:", responseText.substring(0, 100));
 
-            // Vérifier si la réponse est vide ou contient seulement des espaces
             if (!responseText || responseText.trim() === "") {
                 console.warn("⚠️ Empty response received");
                 this.state.manifest = {};
                 return;
             }
-
-            // Tenter de parser le JSON
             try {
                 this.state.manifest = JSON.parse(responseText);
-                console.log(
-                    "✅ JSON parsed successfully:",
-                    this.state.manifest,
-                );
             } catch (jsonError) {
                 console.error("❌ JSON parsing failed:", jsonError);
                 console.error("❌ Problematic text:", responseText);
@@ -115,7 +96,6 @@ export class FontManager {
                 "💀 Font manifest loading failed after all retries:",
                 error,
             );
-            // Utiliser un manifest vide au lieu de faire planter l'app
             this.state.manifest = {};
         }
     }
@@ -140,7 +120,6 @@ export class FontManager {
             return true;
         }
 
-        // Ensure manifest is loaded
         if (!this.state.manifestLoaded) {
             await this.init();
         }
@@ -167,18 +146,8 @@ export class FontManager {
         return fontFamily.trim().replace(/["']/g, "");
     }
 
-    // normalizeVariant(variant) {
-    //     if (typeof variant === "number") {
-    //         return variant.toString();
-    //     }
-    //     return variant.toString().trim();
-    // }
-
     normalizeVariant(variant) {
         if (!variant) return "400";
-
-        // Nettoie les espaces ET supprime les parenthèses ( )
-        // Cela transforme "(700)" en "700"
         return variant.toString().trim().replace(/[()]/g, "");
     }
 
@@ -306,7 +275,6 @@ export class FontManager {
             const url = this.buildGoogleFontsUrl();
 
             if (this.isStylesheetLoaded(url)) {
-                console.log("Google fonts already loaded:", url);
                 this.clearPendingRequests();
                 return;
             }
@@ -347,14 +315,9 @@ export class FontManager {
         link.href = url;
         link.crossOrigin = "anonymous";
 
-        // Add error handling
         link.onerror = () => {
             console.error("Failed to load stylesheet:", url);
             this.state.loadedStylesheets.delete(url);
-        };
-
-        link.onload = () => {
-            console.log("Google fonts loaded successfully:", url);
         };
 
         document.head.appendChild(link);
@@ -368,12 +331,10 @@ export class FontManager {
         }
     }
 
-    // Utility method
     delay(ms) {
         return new Promise((resolve) => setTimeout(resolve, ms));
     }
 
-    // Public API methods
     isLoaded(fontFamily, variant = "400") {
         const fontKey = `${this.normalizeFontFamily(
             fontFamily,
@@ -393,7 +354,6 @@ export class FontManager {
         return this.state.pendingRequests.size > 0;
     }
 
-    // Cleanup method
     destroy() {
         this.clearPendingRequests();
         this.state.loaded.clear();

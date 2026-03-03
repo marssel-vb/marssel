@@ -9,8 +9,6 @@ export class OffcanvasManager {
         this.backdrop = null;
         this.isInitialized = false;
         this.offcanvasStyles = new OffcanvasStyles(marssel.styleManager);
-
-        // Bind methods to preserve context
         this.handleClick = this.handleClick.bind(this);
         this.handleKeydown = this.handleKeydown.bind(this);
     }
@@ -18,7 +16,6 @@ export class OffcanvasManager {
     init() {
         if (this.isInitialized) return;
 
-        // Vérifie s'il y a au moins un trigger avec une requête plus efficace
         if (!document.querySelector("[data-offcanvas-target]")) return;
 
         this.offcanvasStyles.initializeStyles();
@@ -31,20 +28,17 @@ export class OffcanvasManager {
     createBackdrop() {
         this.backdrop = document.createElement("div");
         this.backdrop.className = "offcanvas-backdrop";
-        this.backdrop.style.display = "none"; // Caché par défaut
+        this.backdrop.style.display = "none";
         document.body.appendChild(this.backdrop);
     }
 
     initEvents() {
-        // Utilisation de la délégation d'événements pour optimiser les performances
         document.addEventListener("click", this.handleClick);
         document.addEventListener("keydown", this.handleKeydown);
     }
 
     handleClick(event) {
         const { target } = event;
-
-        // Gestion de l'ouverture
         const trigger = target.closest("[data-offcanvas-target]");
         if (trigger) {
             const targetId = trigger.getAttribute("data-offcanvas-target");
@@ -56,7 +50,6 @@ export class OffcanvasManager {
             return;
         }
 
-        // Gestion de la fermeture
         if (
             target.closest(".offcanvas-close") ||
             (target === this.backdrop && this.activeOffcanvas)
@@ -73,21 +66,19 @@ export class OffcanvasManager {
     }
 
     /**
-     * Affiche un offcanvas
-     * @param {string} id - L'identifiant de l'offcanvas
-     * @param {boolean} lockScroll - Si true, verrouille le défilement de la page
-     * @returns {boolean} - True si l'offcanvas a été affiché avec succès
+     * Displays an offcanvas
+     * @param {string} id - The ID of the offcanvas
+     * @param {boolean} lockScroll - If true, locks page scrolling
+     * @returns {boolean} - True if the offcanvas was successfully displayed
      */
     show(id, lockScroll = true) {
         const offcanvas = this.getOffcanvasElement(id);
         if (!offcanvas) return false;
 
-        // Cacher l'offcanvas actif s'il y en a un
         if (this.activeOffcanvas && this.activeOffcanvas !== id) {
             this.hideActive();
         }
 
-        // Éviter de réafficher le même offcanvas
         if (this.activeOffcanvas === id) return true;
 
         this.setActiveOffcanvas(id, offcanvas, lockScroll);
@@ -98,8 +89,8 @@ export class OffcanvasManager {
     }
 
     /**
-     * Cache l'offcanvas actif
-     * @returns {boolean} - True si un offcanvas a été caché
+     * Hides the active offcanvas
+     * @returns {boolean} - True if an offcanvas has been hidden
      */
     hideActive() {
         if (!this.activeOffcanvas) return false;
@@ -117,7 +108,7 @@ export class OffcanvasManager {
     }
 
     /**
-     * Méthodes utilitaires privées
+     * Private utility methods
      */
     getOffcanvasElement(id) {
         const offcanvas = document.getElementById(id);
@@ -134,11 +125,9 @@ export class OffcanvasManager {
     }
 
     showElements(offcanvas, lockScroll) {
-        // Utilisation de requestAnimationFrame pour une animation plus fluide
         requestAnimationFrame(() => {
             offcanvas.classList.add("show");
             this.backdrop.style.display = "block";
-            // Force reflow pour s'assurer que display: block est appliqué
             this.backdrop.offsetHeight;
             this.backdrop.classList.add("show");
 
@@ -152,12 +141,11 @@ export class OffcanvasManager {
         element.classList.remove("show");
         this.backdrop.classList.remove("show");
 
-        // Cacher le backdrop après la transition (optimisation)
         setTimeout(() => {
             if (!this.backdrop.classList.contains("show")) {
                 this.backdrop.style.display = "none";
             }
-        }, 300); // Durée de transition CSS
+        }, 300);
 
         if (lockScroll) {
             document.body.classList.remove("offcanvas-lock-scroll");
@@ -173,20 +161,19 @@ export class OffcanvasManager {
             new CustomEvent(eventName, {
                 bubbles: true,
                 cancelable: true,
-            })
+            }),
         );
     }
 
     /**
-     * Crée un nouvel offcanvas avec validation améliorée
-     * @param {Object} options - Options de configuration
-     * @returns {HTMLElement|null} - L'élément créé ou null en cas d'erreur
+     * Creates a new offcanvas with improved validation
+     * @param {Object} options - Configuration options
+     * @returns {HTMLElement|null} - Returns the created element or null on error
      */
     create({ id, title = "", content = "", position = "start" } = {}) {
-        // Validation des paramètres
         if (!id || typeof id !== "string") {
             console.error(
-                "L'ID de l'offcanvas est requis et doit être une chaîne."
+                "L'ID de l'offcanvas est requis et doit être une chaîne.",
             );
             return null;
         }
@@ -199,7 +186,7 @@ export class OffcanvasManager {
         const validPositions = ["start", "end", "top", "bottom"];
         if (!validPositions.includes(position)) {
             console.warn(
-                `Position invalide: ${position}. Utilisation de 'start' par défaut.`
+                `Position invalide: ${position}. Utilisation de 'start' par défaut.`,
             );
             position = "start";
         }
@@ -208,7 +195,7 @@ export class OffcanvasManager {
             id,
             title,
             content,
-            position
+            position,
         );
         document.body.appendChild(offcanvas);
 
@@ -220,7 +207,6 @@ export class OffcanvasManager {
         offcanvas.id = id;
         offcanvas.className = `offcanvas offcanvas-${position}`;
 
-        // Utilisation de template string avec échappement pour éviter les injections XSS
         const safeTitle = this.escapeHtml(title);
         const headerContent = title
             ? `
@@ -246,10 +232,10 @@ export class OffcanvasManager {
     }
 
     /**
-     * Met à jour le contenu d'un offcanvas existant
-     * @param {string} id - Identifiant de l'offcanvas
-     * @param {Object} options - Options à mettre à jour
-     * @returns {boolean} - True si la mise à jour a réussi
+     * Updates the content of an existing offcanvas
+     * @param {string} id - Offcanvas ID
+     * @param {Object} options - Options to update
+     * @returns {boolean} - True if the update was successful
      */
     update(id, { title, content } = {}) {
         const offcanvas = this.getOffcanvasElement(id);
@@ -281,15 +267,14 @@ export class OffcanvasManager {
     }
 
     /**
-     * Supprime un offcanvas du DOM
-     * @param {string} id - Identifiant de l'offcanvas
-     * @returns {boolean} - True si la suppression a réussi
+     * Removes an offcanvas from the DOM
+     * @param {string} id - Identifier of the offcanvas
+     * @returns {boolean} - True if the removal was successful
      */
     remove(id) {
         const offcanvas = this.getOffcanvasElement(id);
         if (!offcanvas) return false;
 
-        // Si l'offcanvas est actif, le cacher d'abord
         if (this.activeOffcanvas === id) {
             this.hideActive();
         }
@@ -301,9 +286,9 @@ export class OffcanvasManager {
     }
 
     /**
-     * Utilitaire pour échapper le HTML et éviter les injections XSS
-     * @param {string} text - Texte à échapper
-     * @returns {string} - Texte échappé
+     * Utility to escape HTML and prevent XSS injections
+     * @param {string} text - Text to escape
+     * @returns {string} - Escaped text
      */
     escapeHtml(text) {
         const div = document.createElement("div");
@@ -312,7 +297,7 @@ export class OffcanvasManager {
     }
 
     /**
-     * Nettoie les event listeners (à appeler lors de la destruction)
+     * Cleans up event listeners (to be called during destruction)
      */
     destroy() {
         document.removeEventListener("click", this.handleClick);

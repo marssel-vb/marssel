@@ -1,7 +1,5 @@
-// Grouping of managers
 import * as Managers from "../managers/index.js";
 
-// Utility constants
 import {
     properties,
     breakpoints,
@@ -9,7 +7,7 @@ import {
     CLASS_REGEX,
     COLOR_REGEX,
     CRITICAL_SELECTORS,
-    defaultThemes, // Importer la fonction d'extension
+    defaultThemes,
 } from "../utils/constants.js";
 
 import { parseClassName } from "../utils/parsed.js";
@@ -33,7 +31,6 @@ export class Marssel {
         this.allThemes = this.mergeThemes(defaultThemes || {}, themes);
         this.componentStyles = components;
 
-        // List of managers to instantiate
         const managerList = [
             "FontManager",
             "IconManager",
@@ -52,7 +49,6 @@ export class Marssel {
             "AnimationManager",
         ];
 
-        // Instantiating managers dynamically
         for (const key of managerList) {
             const name = key.charAt(0).toLowerCase() + key.slice(1);
             this[name] =
@@ -67,7 +63,6 @@ export class Marssel {
     }
 
     mergeThemes(defaultThemes, customThemes) {
-        // CORRECTION 5: Vérifications plus robustes
         if (!defaultThemes || typeof defaultThemes !== "object") {
             console.warn(
                 "defaultThemes manquant ou invalide, utilisation d'un objet vide",
@@ -84,10 +79,8 @@ export class Marssel {
 
         const merged = { ...defaultThemes };
 
-        // Pour chaque thème personnalisé (light, dark, etc.)
         Object.keys(customThemes).forEach((themeName) => {
             if (merged[themeName]) {
-                // Étend le thème existant
                 merged[themeName] = {
                     ...merged[themeName],
                     ...customThemes[themeName],
@@ -103,7 +96,6 @@ export class Marssel {
         try {
             if (!this.allThemes || Object.keys(this.allThemes).length === 0) {
                 console.error("Aucun thème disponible pour l'initialisation");
-                // Créer des thèmes par défaut minimaux
                 this.allThemes = {
                     light: {},
                     dark: {},
@@ -111,10 +103,17 @@ export class Marssel {
                 this.themeManager.themes = this.allThemes;
             }
 
-            // Initialise les styles critiques IMMÉDIATEMENT
+            const cached = this.styleManager.styleCache?.load();
+            if (cached) {
+                this.styleManager.selectorDeclarations =
+                    this.styleManager.styleCache.merge(
+                        new Map(),
+                        cached.selectorDeclarations,
+                    );
+            }
+
             this.styleManager.initializeStyleSheet();
 
-            // Optimisation: Ne pas attendre DOMContentLoaded si déjà chargé
             if (document.readyState !== "loading") {
                 await Promise.all([
                     this.fontManager.init(),
@@ -132,36 +131,33 @@ export class Marssel {
                 });
             }
 
-            // Charge les polices et icônes en parallèle
-            await Promise.all([
-                this.fontManager.init(),
-                this.iconManager.init(),
-            ]);
-
             this.themeManager.init(this.config.theme);
 
-            // Styles par défaut
             this.styleManager.addDefaultStyles();
-
             this.preprocessAllCompactClasses();
-
-            // NOUVEAU : Traite spécifiquement les éléments critiques en premier
             await this.processCriticalElementsFirst();
-
-            // Traite d'abord les éléments visibles
             this.domManager.processVisibleElementsFirst();
+
+            this.headerManager.init();
+            this.dropdownManager.init();
+            this.toastManager.init();
+            this.domManager.processAllElements();
+
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    document.body.classList.add("marssel-ready");
+                });
+            });
+
             this.domManager.setupObservers();
 
-            // Managers to be initialized
             const managersToInit = [
+                "carouselManager",
                 "carouselManager",
                 "modalManager",
                 "popoverManager",
                 "scrollspyManager",
-                "toastManager",
                 "tooltipManager",
-                "headerManager",
-                "dropdownManager",
                 "offcanvasManager",
                 "tabsManager",
                 "animationManager",
@@ -169,7 +165,6 @@ export class Marssel {
 
             this.registerComponentStyles();
 
-            // Initialisation différée des managers non critiques
             setTimeout(() => {
                 managersToInit.forEach((manager) => {
                     try {
@@ -182,19 +177,10 @@ export class Marssel {
                     }
                 });
 
-                this.domManager.processAllElements();
-
-                // Nettoyer le cache au déchargement de la page
                 window.addEventListener("beforeunload", () => {
                     this.styleManager.saveCachedStyles();
                 });
-
-                // Marquer comme prêt immédiatement après le traitement
-                requestAnimationFrame(() => {
-                    document.body.classList.add("marssel-ready");
-                    console.log("🎨 Marssel initialisé avec succès");
-                });
-            }, 50); // Réduit de 100ms à 50ms
+            }, 50);
         } catch (error) {
             console.error("⚠ Erreur initialisation Marssel:", error);
         }
@@ -202,11 +188,10 @@ export class Marssel {
 
     clearStyleCache() {
         sessionStorage.removeItem(this.styleManager.STORAGE_KEY);
-        console.log("🗑️ Cache styles nettoyé");
+        console.log("🗑️ Cleaned style cache");
     }
 
     preprocessAllCompactClasses() {
-        // Scanner tout le document pour les classes avec ---
         const allElements = document.querySelectorAll("*");
         const compactClasses = new Set();
 
@@ -218,16 +203,14 @@ export class Marssel {
             });
         });
 
-        // Traiter immédiatement toutes ces classes
         compactClasses.forEach((className) => {
             this.domManager.processClassOptimized(className);
         });
 
-        // Forcer la mise à jour des styles
         this.domManager.processPendingClasses();
-        this.styleManager.updateStyles();
+        this.styleManager.updateStylesSync();
 
-        console.log(`🎨 ${compactClasses.size} classes compactes prétraitées`);
+        //console.log(`🎨 ${compactClasses.size} pre-treated compact classes`);
     }
 
     async processCriticalElementsFirst() {
@@ -262,7 +245,7 @@ export class Marssel {
                         }
                     });
                 } catch (e) {
-                    // Ignorer les erreurs de sélecteur
+                    //
                 }
             });
 
@@ -271,7 +254,6 @@ export class Marssel {
                 return;
             }
 
-            // Traiter immédiatement les éléments critiques
             let processed = 0;
             const total = criticalElements.length;
 
@@ -280,11 +262,9 @@ export class Marssel {
                 processed++;
 
                 if (processed === total) {
-                    // Traiter immédiatement les styles des éléments critiques
                     this.domManager.processPendingClasses();
                     this.styleManager.updateStyles();
 
-                    // Laisser un frame pour que les styles s'appliquent
                     requestAnimationFrame(() => {
                         resolve();
                     });
@@ -306,17 +286,14 @@ export class Marssel {
                 ? styles.join(" ")
                 : styles;
 
-            // Créer une classe virtuelle qui sera traitée par le système existant
             const virtualElement = document.createElement("div");
             virtualElement.className = styleString;
 
-            // Parser et enregistrer les styles
             const classList = virtualElement.classList;
             Array.from(classList).forEach((className) => {
                 this.domManager.processClassOptimized(className);
             });
 
-            // Mapper le sélecteur personnalisé
             this.mapComponentSelector(selector, styleString);
         });
 
@@ -324,15 +301,10 @@ export class Marssel {
     }
 
     mapComponentSelector(selector, styles) {
-        // Extraire le nom de base et le pseudo-sélecteur
         const [baseSelector, pseudoSelector] = selector.split(":");
-
-        // Créer le sélecteur CSS final
         const cssSelector = pseudoSelector
             ? `.${baseSelector}:${pseudoSelector}`
             : `.${baseSelector}`;
-
-        // Ajouter au StyleManager
         const declarations = new Set();
         const classList = styles.split(" ");
 
@@ -354,7 +326,6 @@ export class Marssel {
         );
     }
 
-    // Exposition of constants
     get currentTheme() {
         return this.themeManager?.currentTheme || "light";
     }

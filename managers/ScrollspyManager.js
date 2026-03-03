@@ -5,8 +5,6 @@ export class ScrollspyManager {
         this.scrollTimeout = null;
         this.resizeTimeout = null;
         this.isScrolling = false;
-
-        // Bind methods to avoid creating new functions on each call
         this.handleScroll = this.handleScroll.bind(this);
         this.handleResize = this.handleResize.bind(this);
         this.handleMutation = this.handleMutation.bind(this);
@@ -16,13 +14,9 @@ export class ScrollspyManager {
         const scrollspyElements = document.querySelectorAll("[data-scrollspy]");
         if (scrollspyElements.length === 0) return;
 
-        // Initialize existing scrollspy elements
         scrollspyElements.forEach((el) => this.createScrollspy(el));
 
-        // Setup optimized mutation observer
         this.setupMutationObserver();
-
-        // Setup optimized event listeners
         this.setupEventListeners();
     }
 
@@ -64,7 +58,7 @@ export class ScrollspyManager {
             if (this.scrollspies.size > 0) {
                 this.refreshAll();
             }
-        }, 100); // Debounce resize events
+        }, 100);
     }
 
     handleMutation(mutations) {
@@ -91,9 +85,7 @@ export class ScrollspyManager {
         }
     }
 
-    // REMPLACEZ CETTE FONCTION
     createScrollspy(navElement) {
-        // Early return if already exists
         if (this.scrollspies.has(navElement)) {
             return this.scrollspies.get(navElement);
         }
@@ -106,10 +98,7 @@ export class ScrollspyManager {
             return null;
         }
 
-        // Parse options with defaults
         const options = this.parseOptions(navElement);
-
-        // Get sections efficiently
         const sections = this.getSections(navElement);
 
         if (sections.length === 0) {
@@ -117,38 +106,28 @@ export class ScrollspyManager {
             return null;
         }
 
-        // --- DÉBUT DE LA LOGIQUE HYBRIDE ---
-        // Détecter l'élément de scroll (le conteneur ou la fenêtre)
         const style = window.getComputedStyle(targetContainer);
         const isScrollable =
             style.overflowY === "scroll" || style.overflowY === "auto";
         const scrollElement = isScrollable ? targetContainer : window;
-        // --- FIN DE LA LOGIQUE HYBRIDE ---
-
-        // Create optimized scrollspy instance
         const scrollspyInstance = {
             navElement,
             targetContainer,
             sections,
             options,
-            cachedPositions: new Map(), // Cache for section positions
-            lastActiveSection: null, // Track last active to avoid unnecessary updates
-            scrollElement: scrollElement, // Stocker l'élément de scroll
+            cachedPositions: new Map(),
+            lastActiveSection: null,
+            scrollElement: scrollElement,
         };
 
-        // --- NOUVEL ÉCOUTEUR ---
-        // Ajouter l'écouteur de scroll sur le bon élément
         scrollElement.addEventListener("scroll", this.handleScroll, {
             passive: true,
         });
-        // --- FIN NOUVEL ÉCOUTEUR ---
 
-        // Setup smooth scrolling if enabled
         if (options.smoothScroll) {
             this.setupSmoothScrolling(scrollspyInstance);
         }
 
-        // Store and initialize
         this.scrollspies.set(navElement, scrollspyInstance);
         this.refreshScrollspy(scrollspyInstance);
         this.updateScrollspy(scrollspyInstance);
@@ -160,12 +139,12 @@ export class ScrollspyManager {
         return {
             offset: parseInt(
                 navElement.getAttribute("data-scrollspy-offset") || "0",
-                10
+                10,
             ),
             activeClass:
                 navElement.getAttribute("data-scrollspy-active") || "active",
             threshold: parseFloat(
-                navElement.getAttribute("data-scrollspy-threshold") || "0.2"
+                navElement.getAttribute("data-scrollspy-threshold") || "0.2",
             ),
             smoothScroll:
                 navElement.getAttribute("data-scrollspy-smooth") !== "false",
@@ -188,7 +167,6 @@ export class ScrollspyManager {
         return sections;
     }
 
-    // REMPLACEZ CETTE FONCTION
     setupSmoothScrolling(scrollspy) {
         const clickHandler = (e) => {
             e.preventDefault();
@@ -197,12 +175,9 @@ export class ScrollspyManager {
 
             if (section) {
                 const offset = scrollspy.options.offset;
-
-                // --- LOGIQUE HYBRIDE ---
                 const isWindowScroll = scrollspy.scrollElement === window;
 
                 if (isWindowScroll) {
-                    // Cas 1: Scroll de la fenêtre (Exemple 1)
                     const top =
                         section.getBoundingClientRect().top +
                         window.scrollY -
@@ -213,7 +188,6 @@ export class ScrollspyManager {
                         behavior: "smooth",
                     });
                 } else {
-                    // Cas 2: Scroll du conteneur (Exemple 2)
                     const top = section.offsetTop - offset;
 
                     scrollspy.targetContainer.scrollTo({
@@ -221,11 +195,9 @@ export class ScrollspyManager {
                         behavior: "smooth",
                     });
                 }
-                // --- FIN LOGIQUE HYBRIDE ---
             }
         };
 
-        // Store handler for cleanup
         scrollspy.clickHandler = clickHandler;
 
         scrollspy.sections.forEach(({ link }) => {
@@ -233,18 +205,13 @@ export class ScrollspyManager {
         });
     }
 
-    // REMPLACEZ CETTE FONCTION
     refreshScrollspy(scrollspy) {
-        // Clear cached positions
         scrollspy.cachedPositions.clear();
         const isWindowScroll = scrollspy.scrollElement === window;
 
-        // Update section positions
         scrollspy.sections.forEach((section) => {
             if (section.section) {
-                // --- LOGIQUE HYBRIDE ---
                 if (isWindowScroll) {
-                    // Cas 1: Position par rapport au document
                     const rect = section.section.getBoundingClientRect();
                     const position = {
                         top: rect.top + window.scrollY,
@@ -253,7 +220,6 @@ export class ScrollspyManager {
                     };
                     scrollspy.cachedPositions.set(section.id, position);
                 } else {
-                    // Cas 2: Position par rapport au conteneur
                     const position = {
                         top: section.section.offsetTop,
                         bottom:
@@ -263,12 +229,10 @@ export class ScrollspyManager {
                     };
                     scrollspy.cachedPositions.set(section.id, position);
                 }
-                // --- FIN LOGIQUE HYBRIDE ---
             }
         });
     }
 
-    // REMPLACEZ CETTE FONCTION
     updateScrollspy(scrollspy) {
         const {
             sections,
@@ -278,23 +242,16 @@ export class ScrollspyManager {
             scrollElement,
         } = scrollspy;
 
-        // --- LOGIQUE HYBRIDE ---
         const isWindowScroll = scrollElement === window;
-
-        // Obtenir la position de scroll et la hauteur de la "vue"
         const scrollPosition =
             (isWindowScroll ? window.scrollY : targetContainer.scrollTop) +
             options.offset;
         const viewportHeight = isWindowScroll
             ? window.innerHeight
             : targetContainer.clientHeight;
-
-        // Obtenir le rectangle du conteneur de scroll (pour la normalisation)
-        // Si c'est window, son "top" est 0.
         const containerRect = isWindowScroll
             ? { top: 0, bottom: viewportHeight }
             : targetContainer.getBoundingClientRect();
-        // --- FIN LOGIQUE HYBRIDE ---
 
         let activeSection = null;
         let maxVisibility = 0;
@@ -302,24 +259,15 @@ export class ScrollspyManager {
         for (const section of sections) {
             if (!section.section) continue;
 
-            // --- CALCUL UNIVERSEL ---
-            // Obtenir le rectangle de la section (toujours par rapport à la FENÊTRE)
             const rect = section.section.getBoundingClientRect();
             const sectionHeight = rect.height;
-
-            // Normaliser les positions par rapport au conteneur de SCROLL
-            // top/bottom de la section RELATIF au top/bottom du conteneur de SCROLL
             const relativeTop = rect.top - containerRect.top;
             const relativeBottom = rect.bottom - containerRect.top;
-
-            // Calculer la partie visible (normalisée)
             const visibleTop = Math.max(0, relativeTop);
-            const visibleBottom = Math.min(viewportHeight, relativeBottom); // Limité par la hauteur de la vue
+            const visibleBottom = Math.min(viewportHeight, relativeBottom);
             const visibleHeight = Math.max(0, visibleBottom - visibleTop);
-
             const visibilityPercentage =
                 sectionHeight > 0 ? visibleHeight / sectionHeight : 0;
-            // --- FIN CALCUL UNIVERSEL ---
 
             if (
                 visibilityPercentage > options.threshold &&
@@ -330,12 +278,9 @@ export class ScrollspyManager {
             }
         }
 
-        // Fallback logic (utilise maintenant le cache dynamique)
         if (!activeSection) {
             const sectionsAbove = sections.filter((section) => {
                 const cached = cachedPositions.get(section.id);
-                // 'scrollPosition' et 'cached.top' sont tous les deux "offsettés"
-                // ou tous les deux relatifs au document/conteneur, donc la comparaison est juste.
                 return cached && cached.top <= scrollPosition;
             });
 
@@ -350,7 +295,6 @@ export class ScrollspyManager {
             }
         }
 
-        // Only update DOM if active section changed
         if (scrollspy.lastActiveSection !== activeSection) {
             this.updateActiveClasses(scrollspy, activeSection);
             scrollspy.lastActiveSection = activeSection;
@@ -360,12 +304,10 @@ export class ScrollspyManager {
     updateActiveClasses(scrollspy, activeSection) {
         const { sections, options } = scrollspy;
 
-        // Remove active class from all links
         sections.forEach(({ link }) => {
             link.classList.remove(options.activeClass);
         });
 
-        // Add active class to active link
         if (activeSection) {
             activeSection.link.classList.add(options.activeClass);
         }
@@ -384,50 +326,37 @@ export class ScrollspyManager {
         this.updateAll();
     }
 
-    // REMPLACEZ CETTE FONCTION
     destroy(navElement) {
         const scrollspy = this.scrollspies.get(navElement);
         if (!scrollspy) return;
 
-        // Clean up event listeners
         if (scrollspy.clickHandler) {
             scrollspy.sections.forEach(({ link }) => {
                 link.removeEventListener("click", scrollspy.clickHandler);
             });
         }
 
-        // --- LOGIQUE HYBRIDE ---
-        // Supprimer l'écouteur du bon élément
         scrollspy.scrollElement.removeEventListener(
             "scroll",
-            this.handleScroll
+            this.handleScroll,
         );
-        // --- FIN LOGIQUE HYBRIDE ---
 
-        // Clear caches
         scrollspy.cachedPositions.clear();
 
-        // Remove from map
         this.scrollspies.delete(navElement);
     }
 
-    // REMPLACEZ CETTE FONCTION
     destroyAll() {
-        // Clean up global event listeners
-        // window.removeEventListener("scroll", this.handleScroll); // Déjà supprimé
         window.removeEventListener("resize", this.handleResize);
 
-        // Clean up mutation observer
         if (this.observer) {
             this.observer.disconnect();
         }
 
-        // Clean up all scrollspy instances
         this.scrollspies.forEach((_, navElement) => {
             this.destroy(navElement);
         });
 
-        // Clear timeouts
         if (this.scrollTimeout) {
             cancelAnimationFrame(this.scrollTimeout);
         }

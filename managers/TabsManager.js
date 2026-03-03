@@ -8,10 +8,7 @@ export class TabsManager {
         this.stylesApplied = false;
         this.tabGroups = new LRUCache(50);
         this.observer = null;
-
-        // Cache DOM elements
         this.documentElement = document.documentElement;
-
         this.config = {
             defaultOrientation: "horizontal",
             defaultStyle: "default",
@@ -23,27 +20,17 @@ export class TabsManager {
     }
 
     /**
-     * Initialise le TabsManager
+     * Initializes the TabsManager
      */
     init() {
         if (!this.config.autoInit) return;
 
-        console.log("🔷 Initialisation TabsManager...");
-
-        // Enregistrer les styles de base
-        //this.tabsStyle.registerBaseStyles();
-
-        // Initialiser tous les tabs existants
         this.initializeAllTabs();
-
-        // Observer les nouveaux tabs
         this.setupObserver();
-
-        console.log("✅ TabsManager initialisé");
     }
 
     /**
-     * Initialise tous les tabs présents dans le DOM
+     * Initializes all tabs present in the DOM
      */
     initializeAllTabs() {
         const tabContainers = document.querySelectorAll(
@@ -56,12 +43,10 @@ export class TabsManager {
                 count++;
             }
         });
-
-        console.log(`📑 ${count} groupe(s) de tabs initialisé(s)`);
     }
 
     /**
-     * Initialise un groupe de tabs spécifique
+     * Initializes a specific group of tabs
      */
     initializeTabGroup(container) {
         if (!this.stylesApplied) {
@@ -69,38 +54,28 @@ export class TabsManager {
             this.stylesApplied = true;
         }
 
-        // Générer ou récupérer l'ID du groupe
         const groupId = container.dataset.tabs || this.generateGroupId();
 
-        // Éviter la double initialisation
         if (this.tabGroups.has(groupId)) {
-            console.warn(`⚠️ Tab group "${groupId}" déjà initialisé`);
+            console.warn(`⚠️ Tab group "${groupId}" already initialized`);
             return false;
         }
 
-        // Trouver les radios
         const allRadios = container.querySelectorAll(
             'input[type="radio"][name]',
         );
 
         if (allRadios.length === 0) {
-            console.warn("⚠️ Aucun input radio trouvé dans", container);
+            console.warn("⚠️ No radio input found in", container);
             return false;
         }
 
-        // FIX: Filtrer les radios pour ne garder que le premier groupe 'name' trouvé
-        // (Empêche les onglets imbriqués d'être comptés dans le parent)
         const groupName = allRadios[0].name;
         const radios = Array.from(allRadios).filter(
             (r) => r.name === groupName,
         );
-
-        // Parser la configuration
         const config = this.parseConfig(container);
-
-        // Créer la structure du groupe
-        const tabs = this.buildTabsArray(container, radios); // Passer la liste filtrée
-
+        const tabs = this.buildTabsArray(container, radios);
         const tabGroup = {
             id: groupId,
             container,
@@ -110,76 +85,61 @@ export class TabsManager {
             initialized: true,
         };
 
-        // Enregistrer le groupe
         this.tabGroups.set(groupId, tabGroup);
 
-        // Assurer un ID sur le container pour les sélecteurs CSS
         if (!container.id) {
             container.id = groupId;
         }
 
-        // Appliquer les styles via TabsStyles
         this.tabsStyle.applyGroupStyles(tabGroup);
 
-        // Appliquer un preset si spécifié
         if (config.preset && config.preset !== "default") {
             this.tabsStyle.applyPresetStyle(container, config.preset);
         }
 
-        // Attacher les événements
         this.attachEventListeners(tabGroup);
 
-        // Activer le premier onglet si aucun n'est checked
         this.ensureActiveTab(tabGroup);
 
         return true;
     }
 
     /**
-     * Construit le tableau des tabs avec leurs éléments associés
+     * Constructs the table of tabs with their associated elements
      */
     buildTabsArray(container, radios) {
-        // FIX 1: Utiliser [class*="..."] pour trouver le wrapper, même avec des modificateurs
         const contentWrapper = container.querySelector(
             '[class*="tabs-content"]',
         );
 
         if (!contentWrapper) {
-            console.warn(
-                `⚠️ Aucun wrapper ".tabs-content" trouvé dans`,
-                container,
-            );
-            // Retourner une map avec des panels null pour éviter d'autres erreurs
+            console.warn(`⚠️ No wrapper ".tabs-content" found in`, container);
             return Array.from(radios).map((radio, index) => {
                 const label = container.querySelector(
                     `label[for="${radio.id}"]`,
                 );
                 if (!label) {
-                    console.warn(
-                        `⚠️ Aucun label trouvé pour l'input #${radio.id}`,
-                    );
+                    console.warn(`⚠️ No label found for input #${radio.id}`);
                 }
                 return { radio, label, panel: null, index, id: radio.id };
             });
         }
 
-        // FIX 2: Utiliser startsWith("tab-panel") pour trouver les panels, même avec des modificateurs
         const panels = Array.from(contentWrapper.children).filter((child) =>
             Array.from(child.classList).some((c) => c.startsWith("tab-panel")),
         );
 
         return Array.from(radios).map((radio, index) => {
             const label = container.querySelector(`label[for="${radio.id}"]`);
-            const panel = panels[index]; // Obtenir depuis la liste filtrée d'enfants directs
+            const panel = panels[index];
 
             if (!label) {
-                console.warn(`⚠️ Aucun label trouvé pour l'input #${radio.id}`);
+                console.warn(`⚠️ No label found for input #${radio.id}`);
             }
 
             if (!panel) {
-                // Ajout de l'ID du groupe pour un meilleur débogage
                 console.warn(
-                    `⚠️ Aucun panel trouvé à l'index ${index} pour le groupe ${
+                    `⚠️ No panel found at index ${index} for group ${
                         container.dataset.tabs || container.id
                     }`,
                 );
@@ -196,7 +156,7 @@ export class TabsManager {
     }
 
     /**
-     * Parse la configuration depuis les data-attributes
+     * Parse the configuration from the data attributes
      */
     parseConfig(container) {
         return {
@@ -219,7 +179,7 @@ export class TabsManager {
     }
 
     /**
-     * Attache les événements au groupe de tabs
+     * Attach events to the tab group
      */
     attachEventListeners(tabGroup) {
         const { tabs, config } = tabGroup;
@@ -227,14 +187,12 @@ export class TabsManager {
         tabs.forEach((tab) => {
             if (!tab.radio) return;
 
-            // Événement change sur le radio
             tab.radio.addEventListener("change", (e) => {
                 if (e.target.checked) {
                     this.onTabChange(tabGroup, tab);
                 }
             });
 
-            // Navigation clavier sur le label
             if (config.keyboard && tab.label) {
                 tab.label.setAttribute("tabindex", "0");
                 tab.label.addEventListener("keydown", (e) => {
@@ -245,10 +203,9 @@ export class TabsManager {
     }
 
     /**
-     * Gère le changement d'onglet
+     * Manages tab switching
      */
     onTabChange(tabGroup, activeTab) {
-        // Émettre un événement personnalisé
         const event = new CustomEvent("marssel:tab:change", {
             detail: {
                 groupId: tabGroup.id,
@@ -264,17 +221,15 @@ export class TabsManager {
 
         tabGroup.container.dispatchEvent(event);
 
-        // Animation du panel si activée
         if (tabGroup.config.animated && activeTab.panel) {
             this.animatePanel(activeTab.panel);
         }
 
-        // Mettre à jour l'aria-selected
         this.updateAriaAttributes(tabGroup, activeTab);
     }
 
     /**
-     * Anime l'apparition d'un panel
+     * Animates the appearance of a panel
      */
     animatePanel(panel) {
         // Reset inline styles
@@ -294,7 +249,7 @@ export class TabsManager {
     }
 
     /**
-     * Gère la navigation au clavier
+     * Manages keyboard navigation
      */
     handleKeyboardNavigation(event, tabGroup, currentTab) {
         const { tabs } = tabGroup;
@@ -343,7 +298,7 @@ export class TabsManager {
     }
 
     /**
-     * Met à jour les attributs ARIA pour l'accessibilité
+     * Updates ARIA attributes for accessibility
      */
     updateAriaAttributes(tabGroup, activeTab) {
         tabGroup.tabs.forEach((tab) => {
@@ -363,7 +318,7 @@ export class TabsManager {
     }
 
     /**
-     * Assure qu'un onglet est actif au chargement
+     * Ensures that a tab is active on load
      */
     ensureActiveTab(tabGroup) {
         const { tabs } = tabGroup;
@@ -376,7 +331,7 @@ export class TabsManager {
     }
 
     /**
-     * Récupère l'index de l'onglet précédemment actif
+     * Retrieves the index of the previously active tab
      */
     getPreviousActiveIndex(tabGroup) {
         const activeTab = tabGroup.tabs.find((t) => t.radio?.checked);
@@ -384,15 +339,13 @@ export class TabsManager {
     }
 
     /**
-     * Configure un observateur pour les tabs ajoutés dynamiquement
+     * Configure a watcher for dynamically added tabs
      */
     setupObserver() {
         this.observer = new MutationObserver((mutations) => {
             mutations.forEach((mutation) => {
                 mutation.addedNodes.forEach((node) => {
                     if (node.nodeType === 1) {
-                        // Element node
-                        // Vérifier si le nœud lui-même est un container de tabs
                         if (
                             node.matches &&
                             node.matches("[data-tabs], .tabs-container")
@@ -400,7 +353,6 @@ export class TabsManager {
                             this.initializeTabGroup(node);
                         }
 
-                        // Chercher des containers de tabs dans les enfants
                         if (node.querySelectorAll) {
                             const containers = node.querySelectorAll(
                                 "[data-tabs], .tabs-container",
@@ -421,31 +373,25 @@ export class TabsManager {
     }
 
     /**
-     * Génère un ID unique pour un groupe de tabs
+     * Generates a unique ID for a group of tabs
      */
     generateGroupId() {
         return `tabs-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     }
 
-    // ============================================
-    // API PUBLIQUE
-    // ============================================
-
     /**
-     * Active un onglet spécifique par son index
+     * Activates a specific tab by its index
      */
     activateTab(groupId, index) {
         const group = this.tabGroups.get(groupId);
 
         if (!group) {
-            console.warn(`⚠️ Groupe de tabs "${groupId}" introuvable`);
+            console.warn(`⚠️ Tab group "${groupId}" not found`);
             return false;
         }
 
         if (!group.tabs[index]) {
-            console.warn(
-                `⚠️ Onglet à l'index ${index} introuvable dans "${groupId}"`,
-            );
+            console.warn(`⚠️ Tab at index ${index} not found in "${groupId}"`);
             return false;
         }
 
@@ -461,13 +407,13 @@ export class TabsManager {
     }
 
     /**
-     * Récupère l'onglet actif d'un groupe
+     * Retrieves the active tab of a group
      */
     getActiveTab(groupId) {
         const group = this.tabGroups.get(groupId);
 
         if (!group) {
-            console.warn(`⚠️ Groupe de tabs "${groupId}" introuvable`);
+            console.warn(`⚠️ Tab group "${groupId}" not found`);
             return null;
         }
 
@@ -475,7 +421,7 @@ export class TabsManager {
     }
 
     /**
-     * Récupère l'index de l'onglet actif
+     * Retrieves the index of the active tab
      */
     getActiveIndex(groupId) {
         const activeTab = this.getActiveTab(groupId);
@@ -483,21 +429,21 @@ export class TabsManager {
     }
 
     /**
-     * Récupère tous les groupes de tabs
+     * Retrieves all tab groups
      */
     getAllGroups() {
         return Array.from(this.tabGroups.keys());
     }
 
     /**
-     * Récupère un groupe spécifique
+     * Retrieve a specific group
      */
     getGroup(groupId) {
         return this.tabGroups.get(groupId) || null;
     }
 
     /**
-     * Active l'onglet suivant
+     * Activate the next tab
      */
     nextTab(groupId) {
         const group = this.tabGroups.get(groupId);
@@ -506,7 +452,6 @@ export class TabsManager {
         const currentIndex = this.getActiveIndex(groupId);
         const len = group.tabs.length;
 
-        // Chercher le prochain onglet non désactivé
         for (let i = 1; i <= len; i++) {
             const nextIndex = (currentIndex + i) % len;
             if (!group.tabs[nextIndex].radio?.disabled) {
@@ -518,7 +463,7 @@ export class TabsManager {
     }
 
     /**
-     * Active l'onglet précédent
+     * Activates the previous tab
      */
     previousTab(groupId) {
         const group = this.tabGroups.get(groupId);
@@ -527,7 +472,6 @@ export class TabsManager {
         const currentIndex = this.getActiveIndex(groupId);
         const len = group.tabs.length;
 
-        // Chercher l'onglet précédent non désactivé
         for (let i = 1; i <= len; i++) {
             const prevIndex = (currentIndex - i + len) % len;
             if (!group.tabs[prevIndex].radio?.disabled) {
@@ -539,7 +483,7 @@ export class TabsManager {
     }
 
     /**
-     * Désactive un onglet (le rend non cliquable)
+     * Disables a tab (makes it unclickable)
      */
     disableTab(groupId, index) {
         const group = this.tabGroups.get(groupId);
@@ -561,7 +505,7 @@ export class TabsManager {
     }
 
     /**
-     * Active un onglet désactivé
+     * Activates a disabled tab
      */
     enableTab(groupId, index) {
         const group = this.tabGroups.get(groupId);
@@ -583,17 +527,16 @@ export class TabsManager {
     }
 
     /**
-     * Détruit un groupe de tabs et nettoie les ressources
+     * Destroys a group of tabs and cleans up resources
      */
     destroy(groupId) {
         const group = this.tabGroups.get(groupId);
 
         if (!group) {
-            console.warn(`⚠️ Groupe de tabs "${groupId}" introuvable`);
+            console.warn(`⚠️ Tab group "${groupId}" not found`);
             return false;
         }
 
-        // Nettoyer les event listeners en clonant les éléments
         group.tabs.forEach((tab) => {
             if (tab.radio) {
                 const newRadio = tab.radio.cloneNode(true);
@@ -606,34 +549,28 @@ export class TabsManager {
             }
         });
 
-        // Supprimer les styles du groupe
         this.tabsStyle.removeGroupStyles(groupId);
-
-        // Supprimer le groupe de la Map
         this.tabGroups.delete(groupId);
 
-        console.log(`🗑️ Groupe de tabs "${groupId}" détruit`);
+        console.log(`🗑️ Tab group "${groupId}" destroyed`);
         return true;
     }
 
     /**
-     * Nettoie complètement le TabsManager
+     * Completely cleans the TabsManager
      */
     cleanup() {
-        // Détruire tous les groupes
         this.tabGroups.forEach((_, groupId) => {
             this.destroy(groupId);
         });
 
-        // Déconnecter l'observateur
         if (this.observer) {
             this.observer.disconnect();
             this.observer = null;
         }
 
-        // Nettoyer les styles
         this.tabsStyle.cleanup();
 
-        console.log("🧹 TabsManager nettoyé");
+        console.log("🧹 TabsManager cleaned");
     }
 }

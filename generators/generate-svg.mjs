@@ -2,8 +2,8 @@
 import fs from "fs";
 import https from "https";
 import { promisify } from "util";
-import { fileURLToPath } from "url"; // Ajout
-import path from "path"; // Ajout
+import { fileURLToPath } from "url";
+import path from "path";
 
 const writeFile = promisify(fs.writeFile);
 const mkdir = promisify(fs.mkdir);
@@ -227,7 +227,7 @@ const ICONS_LIST = [
     "share-network",
 ];
 
-// --- Déclarations pour le mode --onlynew ---
+// Declarations for the --onlynew mode (avoids duplicates)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const outputDir = "generators";
@@ -276,30 +276,25 @@ function generateSvg(content, styleType) {
 }
 
 async function main() {
-    console.log("🎨 Génération des icônes Phosphor...\n");
+    console.log("🎨 Icon generation ...\n");
 
-    // 1. Gérer l'argument --onlynew
     const onlyNew = process.argv.includes("--onlynew");
-    console.log(`Mode "Only New" activé : ${onlyNew ? "Oui" : "Non"}`);
+    console.log(`"Only New" mode activated : ${onlyNew ? "Oui" : "Non"}`);
 
     let finalJson = {};
     const existingKeys = new Set();
 
-    // 2. Charger le fichier existant si --onlynew est actif
     if (onlyNew) {
         try {
-            // Utiliser un chemin dynamique pour l'importation ES
             const existingModule = await import(`file://${outputFile}`);
             finalJson = existingModule.icons;
             Object.keys(finalJson).forEach((key) => existingKeys.add(key));
-            console.log(
-                `Chargement des ${existingKeys.size} icônes existantes.`,
-            );
+            console.log(`Loading ${existingKeys.size} existing icons.`);
         } catch (e) {
             console.log(
-                `⚠️ Fichier existant ${outputFile} non trouvé ou erreur de chargement. Procède à une génération complète.`,
+                `⚠️ Existing file ${outputFile} not found or error loading. Proceeding with a full generation.`,
             );
-            // Si l'import échoue (fichier inexistant), finalJson reste {}
+            // If the import fails (file does not exist), finalJson remains {}
         }
     }
 
@@ -307,9 +302,8 @@ async function main() {
     let failedIcons = 0;
     const failedList = [];
 
-    // 3. Boucler sur les icônes
     for (const iconName of ICONS_LIST) {
-        console.log(`📦 Traitement de l'icône: ${iconName}`);
+        console.log(`📦 Icon processing : ${iconName}`);
 
         for (const [phosphorStyle, mappedStyle] of Object.entries(STYLES)) {
             const key =
@@ -317,10 +311,9 @@ async function main() {
                     ? iconName
                     : `${iconName}-${mappedStyle}`;
 
-            // 4. Vérification du mode --onlynew
             if (onlyNew && existingKeys.has(key)) {
-                console.log(`  ⏭️  Déjà existante: ${key}`);
-                continue; // Passer au style/icône suivant
+                console.log(`  ⏭️  Already exists: ${key}`);
+                continue;
             }
 
             const filename =
@@ -347,18 +340,17 @@ async function main() {
                     failedIcons++;
                     failedList.push(`${iconName}-${phosphorStyle}`);
                     console.log(
-                        `  ⚠️  Non trouvée: ${iconName}-${phosphorStyle}`,
+                        `  ⚠️  Not found: ${iconName}-${phosphorStyle}`,
                     );
                 }
             } catch (error) {
                 failedIcons++;
                 failedList.push(`${iconName}-${phosphorStyle} (erreur)`);
-                console.log(`  ❌ Erreur: ${iconName}-${phosphorStyle}`);
+                console.log(`  ❌ Error: ${iconName}-${phosphorStyle}`);
             }
         }
     }
 
-    // 5. Sauvegarde
     await mkdir(outputDir, { recursive: true });
 
     const jsContent = `export const icons = ${JSON.stringify(
@@ -369,15 +361,14 @@ async function main() {
 
     await writeFile(outputFile, jsContent, "utf-8");
 
-    // 6. Rapport final
-    console.log(`\n✨ Terminé!`);
-    console.log(`📊 ${totalIcons} icônes générées/téléchargées avec succès`);
-    console.log(`❌ ${failedIcons} icônes échouées`);
-    console.log(`💾 Fichier créé: ${outputFile}`);
-    console.log(`📈 Nombre total d'entrées: ${Object.keys(finalJson).length}`);
+    console.log(`\n✨ Completed !`);
+    console.log(`📊 ${totalIcons} icons generated/downloaded successfully`);
+    console.log(`❌ ${failedIcons} icons failed`);
+    console.log(`💾 File created: ${outputFile}`);
+    console.log(`📈 Total entries: ${Object.keys(finalJson).length}`);
 
     if (failedList.length > 0) {
-        console.log(`\n🚫 Icônes non trouvées (${failedList.length}) :`);
+        console.log(`\n🚫 Not found icons (${failedList.length}) :`);
         failedList.forEach((icon) => console.log(`   - ${icon}`));
     }
 }

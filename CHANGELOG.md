@@ -2,7 +2,34 @@
 
 Ce document liste les changements notables, les correctifs et les nouvelles fonctionnalités introduites dans la librairie **marssel-npm**.
 
-## Version v0.10.2 - 18/02/2026 (Actuelle)
+## Version v0.10.4 - 04/03/2026 (Actuelle)
+
+### 🐛 Corrections de Bugs (Bug Fixes)
+
+- **`parsed.js`** : Correction du filtrage du caractère barre oblique (`/`) dans la fonction `normalizeClassName`. Le caractère `/` est désormais inclus dans la liste des caractères autorisés, permettant l'utilisation correcte de classes telles que `grid-column-[1/-1]`.
+
+---
+
+## Version v0.10.3 - 25/02/2026
+
+### 🐛 Corrections de Bugs (Bug Fixes)
+
+- **ToastManager** : Correction du bug de superposition des toasts lorsque plusieurs notifications sont affichées simultanément à la même position. Les toasts s'empilent désormais verticalement les uns sous les autres grâce à un système de groupes flex par position.
+
+### ✨ Nouvelles Fonctionnalités (Features)
+
+- **ToastManager** : Introduction des groupes de position (`marssel-toast-group`). Chaque position (`top-right`, `bottom-left`, etc.) dispose maintenant d'un sous-conteneur flex dédié qui gère automatiquement l'empilement des toasts et se supprime du DOM quand il est vide.
+- **ToastStyles** : Ajout des styles `POSITION_GROUP_STYLES` pour le conteneur flex par position. Les positions `bottom-*` utilisent `flex-direction: column-reverse` afin que les nouveaux toasts apparaissent toujours du bon côté.
+
+### 🔨 Optimisation et Améliorations Internes
+
+- **Marssel.js** : Ajout du chargement du cache de styles au démarrage via `styleManager.styleCache?.load()`, permettant de restaurer les `selectorDeclarations` mis en cache entre les navigations.
+- **Marssel.js** : Centralisation et clarification de l'ordre d'initialisation des managers (`headerManager`, `dropdownManager`, `toastManager`, `domManager`) et ajout du double `requestAnimationFrame` pour l'application de la classe `marssel-ready` sur le `body`.
+- **Nettoyage général** : Suppression des commentaires superflus dans les fichiers sources pour alléger le code.
+
+---
+
+## Version v0.10.2 - 18/02/2026
 
 ### 🐛 Corrections de Bugs (Bug Fixes)
 

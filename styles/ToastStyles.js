@@ -1,19 +1,42 @@
 export class ToastStyles {
-    // Constantes statiques pour éviter la recréation à chaque instance
     static POSITIONS = Object.freeze({
-        "top-right": { top: "1rem", right: "1rem" },
-        "top-left": { top: "1rem", left: "1rem" },
-        "bottom-right": { bottom: "1rem", right: "1rem" },
-        "bottom-left": { bottom: "1rem", left: "1rem" },
+        "top-right": {
+            top: "1rem",
+            right: "1rem",
+            alignItems: "flex-end",
+            flexDirection: "column",
+        },
+        "top-left": {
+            top: "1rem",
+            left: "1rem",
+            alignItems: "flex-start",
+            flexDirection: "column",
+        },
+        "bottom-right": {
+            bottom: "1rem",
+            right: "1rem",
+            alignItems: "flex-end",
+            flexDirection: "column-reverse",
+        },
+        "bottom-left": {
+            bottom: "1rem",
+            left: "1rem",
+            alignItems: "flex-start",
+            flexDirection: "column-reverse",
+        },
         "top-center": {
             top: "1rem",
             left: "50%",
             transform: "translateX(-50%)",
+            alignItems: "center",
+            flexDirection: "column",
         },
         "bottom-center": {
             bottom: "1rem",
             left: "50%",
             transform: "translateX(-50%)",
+            alignItems: "center",
+            flexDirection: "column-reverse",
         },
     });
 
@@ -40,7 +63,6 @@ export class ToastStyles {
         },
     });
 
-    // Styles pré-calculés pour éviter la recréation
     static CONTAINER_STYLES = new Set([
         "position: fixed",
         "z-index: 9999",
@@ -51,29 +73,38 @@ export class ToastStyles {
         "top: 0",
     ]);
 
+    // Sous-conteneur par position : positionné en fixed, flex colonne
+    static POSITION_GROUP_STYLES = new Set([
+        "position: fixed",
+        "z-index: 9999",
+        "pointer-events: none",
+        "display: flex",
+        "gap: 0.5rem",
+        "max-width: 350px",
+    ]);
+
     static TOAST_BASE_STYLES = new Set([
-        "position: absolute",
+        "position: relative",
         "min-width: 250px",
         "max-width: 350px",
+        "width: 100%",
         "background-color: #fff",
         "color: #333",
         "border-radius: 4px",
         "padding: 1rem",
         "box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15)",
-        "margin-bottom: 0.5rem",
         "pointer-events: auto",
-        "transition: all 0.3s ease-in-out",
+        "transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out",
         "opacity: 0",
         "transform: translateY(10px)",
+        "box-sizing: border-box",
     ]);
 
     static VISIBLE_STYLES = new Set(["opacity: 1", "transform: translateY(0)"]);
 
     static MOBILE_STYLES = new Set([
-        "min-width: calc(100% - 2rem)",
-        "max-width: calc(100% - 2rem)",
-        "margin-left: 1rem",
-        "margin-right: 1rem",
+        "min-width: calc(100vw - 2rem)",
+        "max-width: calc(100vw - 2rem)",
     ]);
 
     static CLOSE_BUTTON_STYLES = new Set([
@@ -107,13 +138,13 @@ export class ToastStyles {
     }
 
     /**
-     * Applique tous les styles de toast
-     * Utilise une approche batch pour optimiser les performances
+     * Applies all toast styles
+     * Uses a batch approach to optimize performance
      */
     applyStyles() {
-        // Tableau des méthodes à exécuter dans l'ordre
         const styleMethods = [
             () => this.addContainerStyles(),
+            () => this.addPositionGroupStyles(),
             () => this.addToastBaseStyles(),
             () => this.addVisibleToastStyles(),
             () => this.addMobileResponsiveStyles(),
@@ -122,17 +153,12 @@ export class ToastStyles {
             () => this.addProgressBarStyles(),
         ];
 
-        // Exécution en batch pour de meilleures performances
         try {
             styleMethods.forEach((method) => method());
         } catch (error) {
-            console.error(
-                "Erreur lors de l'application des styles toast:",
-                error
-            );
+            console.error("Error applying toast styles:", error);
             throw error;
         } finally {
-            // S'assurer que les styles sont toujours appliqués
             this.styleManager.updateStyles();
         }
     }
@@ -141,7 +167,15 @@ export class ToastStyles {
         this.styleManager.addDeclarationsWithMediaQuery(
             [],
             ".marssel-toast-container",
-            ToastStyles.CONTAINER_STYLES
+            ToastStyles.CONTAINER_STYLES,
+        );
+    }
+
+    addPositionGroupStyles() {
+        this.styleManager.addDeclarationsWithMediaQuery(
+            [],
+            ".marssel-toast-group",
+            ToastStyles.POSITION_GROUP_STYLES,
         );
     }
 
@@ -149,7 +183,7 @@ export class ToastStyles {
         this.styleManager.addDeclarationsWithMediaQuery(
             [],
             ".marssel-toast",
-            ToastStyles.TOAST_BASE_STYLES
+            ToastStyles.TOAST_BASE_STYLES,
         );
     }
 
@@ -157,15 +191,15 @@ export class ToastStyles {
         this.styleManager.addDeclarationsWithMediaQuery(
             [],
             ".marssel-toast.visible",
-            ToastStyles.VISIBLE_STYLES
+            ToastStyles.VISIBLE_STYLES,
         );
     }
 
     addMobileResponsiveStyles() {
         this.styleManager.addDeclarationsWithMediaQuery(
             ["msm"], // msm: max-width sm
-            ".marssel-toast",
-            ToastStyles.MOBILE_STYLES
+            ".marssel-toast-group",
+            ToastStyles.MOBILE_STYLES,
         );
     }
 
@@ -173,13 +207,13 @@ export class ToastStyles {
         this.styleManager.addDeclarationsWithMediaQuery(
             [],
             ".marssel-toast-close",
-            ToastStyles.CLOSE_BUTTON_STYLES
+            ToastStyles.CLOSE_BUTTON_STYLES,
         );
     }
 
     /**
-     * Génère les styles pour chaque type de toast
-     * Optimisé avec une approche fonctionnelle
+     * Generates styles for each type of toast
+     * Optimized with a functional approach
      */
     addToastTypeStyles() {
         const typeEntries = Object.entries(ToastStyles.TYPES);
@@ -194,7 +228,7 @@ export class ToastStyles {
             this.styleManager.addDeclarationsWithMediaQuery(
                 [],
                 `.marssel-toast-${type}`,
-                typeDeclarations
+                typeDeclarations,
             );
         });
     }
@@ -203,15 +237,15 @@ export class ToastStyles {
         this.styleManager.addDeclarationsWithMediaQuery(
             [],
             ".marssel-toast-progress",
-            ToastStyles.PROGRESS_BAR_STYLES
+            ToastStyles.PROGRESS_BAR_STYLES,
         );
     }
 
     /**
-     * Récupère les styles de position avec fallback sécurisé
-     * @param {string} position - Position demandée
-     * @param {string} defaultPosition - Position par défaut
-     * @returns {Object} Styles de position
+     * Retrieves position styles for the group container (no alignItems/flexDirection — applied via JS)
+     * @param {string} position - Requested position
+     * @param {string} defaultPosition - Default position
+     * @returns {Object} Position styles
      */
     getPositionStyles(position, defaultPosition = "top-right") {
         const positionStyle = ToastStyles.POSITIONS[position];
@@ -223,7 +257,7 @@ export class ToastStyles {
         const fallbackStyle = ToastStyles.POSITIONS[defaultPosition];
         if (!fallbackStyle) {
             console.warn(
-                `Position invalide: ${position}, utilisation de top-right par défaut`
+                `Invalid position: ${position}, using default top-right position`,
             );
             return ToastStyles.POSITIONS["top-right"];
         }
@@ -232,8 +266,8 @@ export class ToastStyles {
     }
 
     /**
-     * Méthode utilitaire pour vérifier si une position est valide
-     * @param {string} position - Position à vérifier
+     * Utility method to check if a position is valid
+     * @param {string} position - Position to check
      * @returns {boolean}
      */
     static isValidPosition(position) {
@@ -241,8 +275,8 @@ export class ToastStyles {
     }
 
     /**
-     * Méthode utilitaire pour vérifier si un type est valide
-     * @param {string} type - Type à vérifier
+     * Utility method to check if a type is valid
+     * @param {string} type - Type to check
      * @returns {boolean}
      */
     static isValidType(type) {
@@ -250,7 +284,7 @@ export class ToastStyles {
     }
 
     /**
-     * Récupère la liste des positions disponibles
+     * Retrieves the list of available positions
      * @returns {string[]}
      */
     static getAvailablePositions() {
@@ -258,7 +292,7 @@ export class ToastStyles {
     }
 
     /**
-     * Récupère la liste des types disponibles
+     * Retrieves the list of available types
      * @returns {string[]}
      */
     static getAvailableTypes() {

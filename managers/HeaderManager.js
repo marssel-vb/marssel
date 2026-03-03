@@ -12,8 +12,6 @@ export class HeaderManager {
         this.bodyScrollLock = false;
         this.headerStyles = new HeaderStyles(marssel.styleManager);
         this.dropdownManager = marssel.dropdownManager;
-
-        // Constantes pour les breakpoints (converties en nombres)
         this.BREAKPOINTS = {
             xs: parseInt(breakpoints.xs),
             sm: parseInt(breakpoints.sm),
@@ -22,16 +20,9 @@ export class HeaderManager {
             xl: parseInt(breakpoints.xl),
             xxl: parseInt(breakpoints.xxl),
         };
-
-        // Largeurs maximales des conteneurs
         this.CONTAINER_MAX_WIDTHS = containerMaxWidths;
-
-        // Propriétés CSS raccourcies
         this.CSS_PROPERTIES = properties;
-
         this.BREAKPOINT_NAMES = Object.keys(breakpoints);
-
-        // Configuration par défaut
         this.DEFAULT_CONFIG = {
             logoPosition: "left",
             navPosition: "center",
@@ -41,9 +32,7 @@ export class HeaderManager {
             sidebarStyle: "overlay",
             mobileBreakpoint: "md",
         };
-
         this.currentBreakpoint = this.getCurrentBreakpoint();
-        // Gestionnaires d'événements liés (pour pouvoir les supprimer)
         this.boundHandleResize = this.handleResize.bind(this);
         this.boundHandleOutsideClick = this.handleOutsideClick.bind(this);
     }
@@ -52,13 +41,8 @@ export class HeaderManager {
         const headerElement = document.getElementById("main-header");
         if (!headerElement) return;
 
-        // Initialisation des styles de base
         this.headerStyles.initialize();
-
-        // Initialisation de tous les headers
         this.initializeAllHeaders();
-
-        // Ajout des écouteurs d'événements globaux
         this.addGlobalEventListeners();
     }
 
@@ -100,20 +84,10 @@ export class HeaderManager {
         const headerId = this.generateHeaderId(headerElement);
         const config = this.extractHeaderConfig(headerElement);
 
-        // Création du menu mobile et overlay
         this.setupMobileComponents(headerElement, config);
-
-        // Configuration des boutons toggle
         this.setupToggleButtons(headerElement, headerId);
-
-        // Stockage de la configuration
         this.storeHeaderConfig(headerId, headerElement, config);
-
-        // Application de la configuration initiale
         this.applyLayoutConfig(headerId);
-
-        // Initialisation correcte de la visibilité selon le breakpoint actuel
-        this.initializeElementVisibility(headerElement, config);
     }
 
     generateHeaderId(headerElement) {
@@ -180,13 +154,11 @@ export class HeaderManager {
         const mobileMenu = document.createElement("div");
         mobileMenu.className = `mobile-menu ${config.mobileMenuType}`;
 
-        // Clonage de la navbar
         const navbar = headerElement.querySelector(".header-navbar");
         if (navbar) {
             mobileMenu.appendChild(navbar.cloneNode(true));
         }
 
-        // Bouton de fermeture
         const closeButton = this.createCloseButton(headerElement.id);
         mobileMenu.prepend(closeButton);
 
@@ -235,11 +207,9 @@ export class HeaderManager {
         const overlay = element.querySelector(".menu-overlay");
         const toggleButton = element.querySelector(".menu-toggle");
 
-        // Mise à jour de l'état visuel
         element.classList.add("menu-open");
         this.updateHeaderState(headerId, true);
 
-        // Gestion spécifique du type "below"
         if (config.mobileMenuType === "below") {
             this.handleBelowMenuOpen(toggleButton);
         } else {
@@ -252,10 +222,8 @@ export class HeaderManager {
             this.handleOverlayMenuOpen(overlay);
         }
 
-        // Animation d'ouverture du menu
         this.animateMenuOpen(mobileMenu, config);
 
-        // Gestion du scroll pour certains types de menus
         if (this.shouldLockScroll(config.mobileMenuType)) {
             this.toggleBodyScroll(false);
         }
@@ -271,7 +239,7 @@ export class HeaderManager {
         if (!overlay) return;
 
         overlay.style.display = "block";
-        // Utilisation de requestAnimationFrame pour une meilleure performance
+
         requestAnimationFrame(() => {
             overlay.style.opacity = "1";
         });
@@ -298,19 +266,15 @@ export class HeaderManager {
         const overlay = element.querySelector(".menu-overlay");
         const toggleButton = element.querySelector(".menu-toggle");
 
-        // Mise à jour de l'état visuel
         element.classList.remove("menu-open");
         this.updateHeaderState(headerId, false);
 
-        // Gestion spécifique du type "below"
         if (config.mobileMenuType === "below" && toggleButton) {
             toggleButton.style.display = "block";
         }
 
-        // Animation de fermeture
         this.animateMenuClose(mobileMenu, overlay, config);
 
-        // Réactivation du scroll si nécessaire
         if (this.shouldLockScroll(config.mobileMenuType)) {
             this.toggleBodyScroll(true);
         }
@@ -318,7 +282,6 @@ export class HeaderManager {
     }
 
     animateMenuClose(mobileMenu, overlay, config) {
-        // Animation de l'overlay
         if (overlay) {
             overlay.style.opacity = "0";
             setTimeout(() => {
@@ -326,7 +289,6 @@ export class HeaderManager {
             }, 300);
         }
 
-        // Animation du menu
         mobileMenu.style.opacity = "0";
 
         if (config.mobileMenuType === "sidebar") {
@@ -359,13 +321,8 @@ export class HeaderManager {
 
         const { element, config } = header;
 
-        // Nettoyage des anciennes classes
         this.cleanupPositionalClasses(element);
-
-        // Application des nouvelles classes
         this.applyPositionalClasses(element, config);
-
-        // Ajustement pour le breakpoint actuel
         this.adjustLayoutForBreakpoint(headerId);
     }
 
@@ -415,8 +372,6 @@ export class HeaderManager {
         if (newBreakpoint === this.currentBreakpoint) return;
 
         this.currentBreakpoint = newBreakpoint;
-
-        // Réinitialiser complètement l'état visuel de tous les headers
         this.headers.forEach((header, id) => {
             this.resetHeaderVisualState(id);
         });
@@ -432,22 +387,18 @@ export class HeaderManager {
             const isDesktop = this.isDesktopBreakpoint(breakpoint, config);
             const isMobile = this.isMobileBreakpoint(breakpoint, config);
 
-            // Fermeture automatique des menus mobiles en mode desktop
             if (isDesktop && header.isOpen) {
                 this.closeMobileMenu(id);
             }
 
-            // Gestion spécifique de la visibilité des éléments selon le type de menu
             const toggleButton = element.querySelector(".menu-toggle");
             const mobileMenu = element.querySelector(".mobile-menu");
 
             if (toggleButton) {
-                // Le bouton hamburger ne doit être visible qu'en mode mobile
                 toggleButton.style.display = isMobile ? "block" : "none";
             }
 
             if (mobileMenu && isDesktop) {
-                // En mode desktop, s'assurer que le menu mobile est complètement caché
                 mobileMenu.style.display = "none";
                 mobileMenu.style.opacity = "0";
                 mobileMenu.style.transform = "";
@@ -466,26 +417,20 @@ export class HeaderManager {
         );
         const toggleButton = element.querySelector(".menu-toggle");
 
-        // Basculement des classes de vue
         element.classList.toggle("mobile-view", isMobileView);
         element.classList.toggle("desktop-view", !isMobileView);
 
-        // Gestion de la visibilité du bouton hamburger
         if (toggleButton) {
             if (isMobileView) {
-                // En mode mobile, afficher le bouton hamburger
                 toggleButton.style.display = "block";
             } else {
-                // En mode desktop, cacher le bouton hamburger
                 toggleButton.style.display = "none";
             }
         }
 
-        // Initialisation des menus mobiles
         if (isMobileView) {
             this.initializeMobileMenuPosition(element, config);
         } else {
-            // En mode desktop, s'assurer que le menu mobile est caché
             const mobileMenu = element.querySelector(".mobile-menu");
             if (mobileMenu) {
                 mobileMenu.style.display = "none";
@@ -532,7 +477,6 @@ export class HeaderManager {
         this.bodyScrollLock = true;
     }
 
-    // Méthodes publiques pour l'API
     updateHeaderConfig(headerId, newConfig) {
         const header = this.headers.get(headerId);
         if (!header) return false;
@@ -549,13 +493,11 @@ export class HeaderManager {
     initializeMobileMenuDropdowns(mobileMenu) {
         if (!this.dropdownManager) return;
 
-        // Initialisation des dropdowns standards
         const dropdowns = mobileMenu.querySelectorAll(".dropdown");
         dropdowns.forEach((dropdown) => {
             this.dropdownManager.initializeDropdown(dropdown);
         });
 
-        // Initialisation des dropdowns fullwidth
         const fullwidthDropdowns = mobileMenu.querySelectorAll(
             ".dropdown-fullwidth",
         );
@@ -564,14 +506,12 @@ export class HeaderManager {
         });
     }
 
-    // Méthode de nettoyage pour libérer les ressources
     destroy() {
         this.removeGlobalEventListeners();
         this.headers.clear();
         this.toggleBodyScroll(true);
     }
 
-    // Getters utilitaires
     get isAnyMenuOpen() {
         return Array.from(this.headers.values()).some(
             (header) => header.isOpen,
@@ -587,7 +527,6 @@ export class HeaderManager {
         return Array.from(this.headers.keys());
     }
 
-    // Méthodes utilitaires utilisant les constantes
     getBreakpointValue(breakpoint) {
         return this.BREAKPOINTS[breakpoint] || null;
     }
@@ -600,7 +539,6 @@ export class HeaderManager {
         return this.CSS_PROPERTIES[shorthand] || shorthand;
     }
 
-    // Méthode pour appliquer des styles dynamiques en utilisant les propriétés raccourcies
     applyDynamicStyles(element, styles) {
         if (!element || !styles) return;
 
@@ -608,7 +546,6 @@ export class HeaderManager {
             const cssProperty = this.getCSSProperty(property);
 
             if (Array.isArray(cssProperty)) {
-                // Pour les propriétés multiples (comme mx, my, etc.)
                 cssProperty.forEach((prop) => {
                     element.style[prop] = value;
                 });
@@ -618,7 +555,6 @@ export class HeaderManager {
         });
     }
 
-    // Méthode pour réinitialiser complètement l'état visuel d'un header
     resetHeaderVisualState(headerId) {
         const header = this.headers.get(headerId);
         if (!header) return;
@@ -629,15 +565,12 @@ export class HeaderManager {
         const mobileMenu = element.querySelector(".mobile-menu");
         const overlay = element.querySelector(".menu-overlay");
 
-        // Réinitialiser l'état du header
         element.classList.remove("menu-open");
 
-        // Gestion du bouton toggle
         if (toggleButton) {
             toggleButton.style.display = isMobile ? "block" : "none";
         }
 
-        // Gestion du menu mobile
         if (mobileMenu) {
             mobileMenu.style.display = "none";
             mobileMenu.style.opacity = "0";
@@ -652,17 +585,14 @@ export class HeaderManager {
             }
         }
 
-        // Gestion de l'overlay
         if (overlay) {
             overlay.style.display = "none";
             overlay.style.opacity = "0";
         }
 
-        // Mettre à jour l'état stocké
         this.updateHeaderState(headerId, false);
     }
 
-    // Méthode pour obtenir la largeur de conteneur appropriée pour le breakpoint actuel
     getCurrentContainerWidth() {
         const containerWidth = this.getContainerMaxWidth(
             this.currentBreakpoint,
@@ -670,7 +600,6 @@ export class HeaderManager {
         return containerWidth || "100%";
     }
 
-    // Méthode pour vérifier si nous sommes dans un breakpoint mobile
     isMobileBreakpoint(
         breakpoint = this.currentBreakpoint,
         headerConfig = null,
@@ -686,10 +615,9 @@ export class HeaderManager {
         const currentIdx = this.BREAKPOINT_NAMES.indexOf(breakpoint);
         const limitIdx = this.BREAKPOINT_NAMES.indexOf(mobileLimitName);
 
-        return currentIdx < limitIdx; // ✅ CORRECT : strictement inférieur
+        return currentIdx < limitIdx;
     }
 
-    // Méthode pour vérifier si nous sommes dans un breakpoint desktop
     isDesktopBreakpoint(
         breakpoint = this.currentBreakpoint,
         headerConfig = null,
@@ -697,7 +625,6 @@ export class HeaderManager {
         return !this.isMobileBreakpoint(breakpoint, headerConfig);
     }
 
-    // Initialise la visibilité des éléments selon le breakpoint actuel
     initializeElementVisibility(headerElement, config) {
         const isMobile = this.isMobileBreakpoint(
             this.currentBreakpoint,
@@ -707,16 +634,13 @@ export class HeaderManager {
         const mobileMenu = headerElement.querySelector(".mobile-menu");
 
         if (toggleButton) {
-            // Le bouton hamburger ne doit être visible qu'en mode mobile
             toggleButton.style.display = isMobile ? "block" : "none";
         }
 
         if (mobileMenu) {
             if (isMobile) {
-                // En mode mobile, initialiser la position du menu
                 this.initializeMobileMenuPosition(headerElement, config);
             } else {
-                // En mode desktop, cacher complètement le menu mobile
                 mobileMenu.style.display = "none";
                 mobileMenu.style.opacity = "0";
                 mobileMenu.style.transform = "";

@@ -9,17 +9,11 @@ export class ThemeManager {
         this.themeChangeCallbacks = new Set();
         this.themeIcons = new LRUCache(50);
         this.customThemeValues = { light: {}, dark: {} };
-
-        // Cache des éléments DOM
         this.root = document.documentElement;
         this.body = document.body;
-
-        // Constantes pour éviter les strings répétées
         this.STORAGE_KEY = "marssel-theme";
         this.THEME_ATTR = "data-theme";
         this.TRANSITION_DURATION = 300;
-
-        // Récupération du thème sauvegardé
         this.currentTheme = this.getStoredTheme();
     }
 
@@ -27,7 +21,6 @@ export class ThemeManager {
         this.loadCustomThemeValues();
         const detectedTheme = this.detectPreferredTheme(initialTheme);
 
-        // Applique immédiatement les variables CSS au chargement
         this.currentTheme = detectedTheme;
         this.updateThemeVariables();
         this.root.setAttribute(this.THEME_ATTR, detectedTheme);
@@ -36,30 +29,29 @@ export class ThemeManager {
         this.setupEventListeners();
         this.collectThemeIcons();
 
-        // Notifie les callbacks après l'initialisation complète
         this.notifyThemeChange(detectedTheme);
     }
 
     /**
-     * Récupère le thème stocké ou utilise 'auto' par défaut
+     * Retrieves the stored theme or uses 'auto' by default
      */
     getStoredTheme() {
         try {
             return localStorage.getItem(this.STORAGE_KEY) || "auto";
         } catch (error) {
-            console.warn("Impossible d'accéder au localStorage:", error);
+            console.warn("Unable to access localStorage:", error);
             return "auto";
         }
     }
 
     /**
-     * Sauvegarde le thème dans le localStorage
+     * Saves the theme to localStorage
      */
     saveTheme(theme) {
         try {
             localStorage.setItem(this.STORAGE_KEY, theme);
         } catch (error) {
-            console.warn("Impossible de sauvegarder le thème:", error);
+            console.warn("Unable to save theme:", error);
         }
     }
 
@@ -78,7 +70,7 @@ export class ThemeManager {
     }
 
     /**
-     * Met à jour la visibilité d'une icône avec animation optimisée
+     * Updates the visibility of an icon with optimized animation
      */
     updateIconVisibility(icon) {
         const iconTheme = this.themeIcons.get(icon);
@@ -92,7 +84,7 @@ export class ThemeManager {
     }
 
     /**
-     * Affiche une icône avec animation
+     * Displays an animated icon
      */
     showIcon(icon) {
         icon.style.display = "block";
@@ -105,7 +97,7 @@ export class ThemeManager {
     }
 
     /**
-     * Cache une icône avec animation
+     * Hides an animated icon
      */
     hideIcon(icon) {
         icon.style.transition = `opacity ${this.TRANSITION_DURATION}ms ease`;
@@ -119,15 +111,13 @@ export class ThemeManager {
     }
 
     /**
-     * Charge les valeurs de thème personnalisées depuis les attributs data
+     * Loads custom theme values ​​from data attributes
      */
     loadCustomThemeValues() {
         const attributes = this.body.getAttributeNames();
 
-        // Réinitialise les valeurs
         this.customThemeValues = { light: {}, dark: {} };
 
-        // Utilise un objet pour mapper les prefixes aux thèmes
         const prefixMap = {
             "data-theme-light-": "light",
             "data-theme-dark-": "dark",
@@ -153,29 +143,26 @@ export class ThemeManager {
     }
 
     /**
-     * Obtient les variables de thème en combinant les valeurs par défaut et personnalisées
+     * Obtains theme variables by combining default and custom values
      */
     getThemeVariables(theme) {
         return {
-            ...(this.themes[theme] || {}), // Thèmes fusionnés
-            ...(this.customThemeValues[theme] || {}), // Valeurs data-attributes
+            ...(this.themes[theme] || {}),
+            ...(this.customThemeValues[theme] || {}),
         };
     }
 
-    // Ajouter une méthode pour mettre à jour les thèmes
+    /**
+     * Add a method to update themes
+     */
     updateThemes(newThemes) {
-        // CORRECTION : Remplacer complètement les thèmes au lieu de les fusionner
         this.themes = newThemes;
-
-        // Optionnel : Recharger les valeurs personnalisées
         this.loadCustomThemeValues();
-
-        // Optionnel : Réappliquer le thème actuel
         this.updateThemeVariables();
     }
 
     /**
-     * Détecte le thème préféré du système
+     * Detects the system's preferred theme
      */
     detectPreferredTheme(theme) {
         if (theme === "auto") {
@@ -185,7 +172,7 @@ export class ThemeManager {
     }
 
     /**
-     * Obtient la préférence système pour le thème
+     * Gets system preference for the theme
      */
     getSystemPreference() {
         try {
@@ -193,59 +180,50 @@ export class ThemeManager {
                 ? "dark"
                 : "light";
         } catch (error) {
-            console.warn(
-                "Impossible de détecter la préférence système:",
-                error
-            );
+            console.warn("Unable to detect system preference:", error);
             return "light";
         }
     }
 
     /**
-     * Applique un thème avec optimisations
+     * Apply a theme with optimizations
      */
     applyTheme(theme) {
-        if (this.currentTheme === theme) return; // Évite les applications redondantes
+        if (this.currentTheme === theme) return;
 
         this.currentTheme = theme;
-
-        // Application immédiate pour éviter les délais visuels
         this.root.setAttribute(this.THEME_ATTR, theme);
         this.updateThemeVariables();
         this.saveTheme(theme);
 
-        // Mise à jour des icônes avec délai pour l'animation
         requestAnimationFrame(() => {
             this.updateAllIconsVisibility();
         });
 
-        // Notifie les observateurs
         this.notifyThemeChange(theme);
     }
 
     /**
-     * Met à jour toutes les icônes en une seule fois
+     * Updates all icons at once
      */
     updateAllIconsVisibility() {
         this.themeIcons.forEach((_, icon) => this.updateIconVisibility(icon));
     }
 
     /**
-     * Met à jour les variables CSS du thème
+     * Updates the theme's CSS variables
      */
     updateThemeVariables() {
         const themeVars = this.getThemeVariables(this.currentTheme);
 
-        // Vérification que les variables existent
         if (!themeVars || Object.keys(themeVars).length === 0) {
             console.warn(
-                `Aucune variable trouvée pour le thème: ${this.currentTheme}`
+                `No theme variables found for theme: ${this.currentTheme}`,
             );
-            console.warn("Thèmes disponibles:", Object.keys(this.themes || {}));
+            console.warn("Available themes:", Object.keys(this.themes || {}));
             return;
         }
 
-        // Applique les variables CSS
         Object.entries(themeVars).forEach(([varName, value]) => {
             if (value !== undefined && value !== null) {
                 this.root.style.setProperty(varName, value);
@@ -254,7 +232,7 @@ export class ThemeManager {
     }
 
     /**
-     * Alterne entre les thèmes clair et sombre
+     * Alternates between light and dark themes
      */
     toggleTheme() {
         const newTheme = this.currentTheme === "light" ? "dark" : "light";
@@ -262,11 +240,11 @@ export class ThemeManager {
     }
 
     /**
-     * Ajoute un callback pour les changements de thème
+     * Adds a callback for theme changes
      */
     onThemeChange(callback) {
         if (typeof callback !== "function") {
-            console.warn("Le callback doit être une fonction");
+            console.warn("The callback must be a function");
             return () => {};
         }
 
@@ -275,23 +253,20 @@ export class ThemeManager {
     }
 
     /**
-     * Notifie tous les callbacks des changements de thème
+     * Notify all callbacks of theme changes
      */
     notifyThemeChange(theme) {
         this.themeChangeCallbacks.forEach((callback) => {
             try {
                 callback(theme);
             } catch (error) {
-                console.error(
-                    "Erreur dans le callback de changement de thème:",
-                    error
-                );
+                console.error("Error in theme change callback:", error);
             }
         });
     }
 
     /**
-     * Configure tous les event listeners
+     * Configure all event listeners
      */
     setupEventListeners() {
         this.setupThemeSwitchers();
@@ -299,23 +274,22 @@ export class ThemeManager {
     }
 
     /**
-     * Configure les boutons de changement de thème
+     * Configure the theme change buttons
      */
     setupThemeSwitchers() {
         const switchers = document.querySelectorAll("[data-theme-switcher]");
         switchers.forEach((el) => {
-            // Utilise une fonction fléchée pour préserver le contexte
             el.addEventListener("click", () => this.toggleTheme());
         });
     }
 
     /**
-     * Configure l'écoute des changements de préférence système
+     * Configures listening for system preference changes
      */
     setupSystemThemeListener() {
         try {
             const mediaQuery = window.matchMedia(
-                "(prefers-color-scheme: dark)"
+                "(prefers-color-scheme: dark)",
             );
 
             const handleSystemChange = (e) => {
@@ -324,22 +298,18 @@ export class ThemeManager {
                 }
             };
 
-            // Utilise la nouvelle API si disponible, sinon fallback
             if (mediaQuery.addEventListener) {
                 mediaQuery.addEventListener("change", handleSystemChange);
             } else {
                 mediaQuery.addListener(handleSystemChange);
             }
         } catch (error) {
-            console.warn(
-                "Impossible de configurer l'écoute du thème système:",
-                error
-            );
+            console.warn("Unable to configure system theme listener:", error);
         }
     }
 
     /**
-     * Nettoie les ressources (utile pour éviter les fuites mémoire)
+     * Cleans up resources (useful for preventing memory leaks)
      */
     destroy() {
         this.themeChangeCallbacks.clear();
@@ -348,14 +318,14 @@ export class ThemeManager {
     }
 
     /**
-     * Getter pour le thème actuel
+     * Getter for the current theme
      */
     get theme() {
         return this.currentTheme;
     }
 
     /**
-     * Getter pour vérifier si le mode sombre est actif
+     * Getter to check if dark mode is active
      */
     get isDarkMode() {
         return this.currentTheme === "dark";

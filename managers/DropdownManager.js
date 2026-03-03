@@ -7,7 +7,6 @@ export class DropdownManager {
         this.dropdowns = new Map();
         this.dropdownStyles = new DropdownStyles(marssel.styleManager);
 
-        // Configuration par défaut
         this.defaultConfig = {
             position: "bottom-left",
             animation: "fade",
@@ -15,17 +14,12 @@ export class DropdownManager {
             container: "parent",
         };
 
-        // Breakpoints constants from constants.js
         this.breakpoints = this.parseBreakpoints(breakpoints);
-
         this.currentBreakpoint = this.getCurrentBreakpoint();
-
-        // Bind methods once
         this.handleResize = this.handleResize.bind(this);
         this.handleDocumentClick = this.handleDocumentClick.bind(this);
     }
 
-    // Parse breakpoints from constants.js (convert "576px" to 576)
     parseBreakpoints(breakpointsObj) {
         const parsed = {};
         for (const [key, value] of Object.entries(breakpointsObj)) {
@@ -36,16 +30,13 @@ export class DropdownManager {
 
     init() {
         const dropdownElements = document.querySelectorAll(
-            ".dropdown, .dropdown-fullwidth"
+            ".dropdown, .dropdown-fullwidth",
         );
 
-        // Si aucun dropdown n'est trouvé, on s'arrête là sans ajouter les styles
         if (dropdownElements.length === 0) return;
 
-        // Add default styles seulement s'il y a des dropdowns
         this.dropdownStyles.initializeStyles();
 
-        // Initialize all dropdowns
         dropdownElements.forEach((dropdown) => {
             if (dropdown.classList.contains("dropdown-fullwidth")) {
                 this.initializeFullwidthDropdown(dropdown);
@@ -54,7 +45,6 @@ export class DropdownManager {
             }
         });
 
-        // Event listeners
         this.addEventListeners();
     }
 
@@ -75,7 +65,7 @@ export class DropdownManager {
 
         if (!toggle || !menu) {
             console.warn(
-                `Dropdown ${dropdownId}: missing toggle or menu element`
+                `Dropdown ${dropdownId}: missing toggle or menu element`,
             );
             return;
         }
@@ -96,7 +86,7 @@ export class DropdownManager {
     initializeFullwidthDropdown(dropdownElement) {
         const dropdownId = this.generateDropdownId(
             dropdownElement,
-            "fullwidth"
+            "fullwidth",
         );
         const config = this.getDropdownConfig(dropdownElement);
         const toggle = dropdownElement.querySelector(".dropdown-toggle");
@@ -104,7 +94,7 @@ export class DropdownManager {
 
         if (!toggle || !menu) {
             console.warn(
-                `Fullwidth dropdown ${dropdownId}: missing toggle or menu element`
+                `Fullwidth dropdown ${dropdownId}: missing toggle or menu element`,
             );
             return;
         }
@@ -163,7 +153,7 @@ export class DropdownManager {
 
     initializeSubmenu(dropdownElement) {
         const submenuToggles = dropdownElement.querySelectorAll(
-            ".dropdown-submenu > a"
+            ".dropdown-submenu > a",
         );
 
         submenuToggles.forEach((toggle) => {
@@ -180,10 +170,8 @@ export class DropdownManager {
         const parentItem = toggle.parentElement;
         const isActive = parentItem.classList.contains("active");
 
-        // Close sibling submenus
         this.closeSiblingSubmenus(parentItem);
 
-        // Toggle current submenu
         parentItem.classList.toggle("active", !isActive);
         if (submenu) {
             submenu.style.display = isActive ? "none" : "block";
@@ -213,10 +201,8 @@ export class DropdownManager {
 
         const { element, isOpen } = dropdown;
 
-        // Close all other dropdowns first
         this.closeAllDropdowns(element);
 
-        // Toggle current dropdown
         if (isOpen) {
             this.closeDropdown(dropdownId);
         } else {
@@ -230,14 +216,11 @@ export class DropdownManager {
 
         const { element, menu } = dropdown;
 
-        // Update visual state
         element.classList.add("active");
         menu.style.display = "block";
 
-        // CORRECTION : Mettre à jour l'état D'ABORD
         dropdown.isOpen = true;
 
-        // Appeler le positionnement ENSUITE
         this.positionDropdown(dropdownId);
     }
 
@@ -247,11 +230,9 @@ export class DropdownManager {
 
         const { element, menu } = dropdown;
 
-        // Update visual state
         element.classList.remove("active");
         menu.style.display = "none";
 
-        // Update stored state
         dropdown.isOpen = false;
     }
 
@@ -272,12 +253,11 @@ export class DropdownManager {
 
         if (!this.breakpoints || typeof this.breakpoints !== "object") {
             console.warn("Breakpoints not defined, using default");
-            return "md"; // valeur par défaut
+            return "md";
         }
 
-        // Order breakpoints from smallest to largest
         const sortedBreakpoints = Object.entries(this.breakpoints).sort(
-            ([, a], [, b]) => a - b
+            ([, a], [, b]) => a - b,
         );
 
         for (let i = 0; i < sortedBreakpoints.length; i++) {
@@ -287,7 +267,6 @@ export class DropdownManager {
             }
         }
 
-        // If width is larger than all breakpoints, return the largest
         return sortedBreakpoints[sortedBreakpoints.length - 1][0];
     }
 
@@ -318,10 +297,8 @@ export class DropdownManager {
 
         const { menu, config } = dropdown;
 
-        // Reset positioning styles
         this.resetMenuPosition(menu);
 
-        // Apply position based on config
         this.applyPosition(menu, config.position);
     }
 
@@ -346,7 +323,6 @@ export class DropdownManager {
         Object.assign(menu.style, styles);
     }
 
-    // Public methods for external control
     getDropdown(dropdownId) {
         return this.dropdowns.get(dropdownId);
     }
@@ -357,7 +333,7 @@ export class DropdownManager {
 
     getOpenDropdowns() {
         return Array.from(this.dropdowns.values()).filter(
-            (dropdown) => dropdown.isOpen
+            (dropdown) => dropdown.isOpen,
         );
     }
 

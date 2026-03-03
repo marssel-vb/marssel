@@ -1,12 +1,10 @@
 /**
- * Marssel - Framework JavaScript frontend modulaire
- * Entry point pour le package npm
+ * Marssel - Modular frontend JavaScript framework
+ * Entry point for the npm package
  */
 
-// Importation de la classe principale
 import { Marssel } from "./core/Marssel.js";
 
-// Importation des managers pour permettre un accès direct si nécessaire
 import { FontManager } from "./managers/FontManager.js";
 import { IconManager } from "./managers/IconManager.js";
 import { ThemeManager } from "./managers/ThemeManager.js";
@@ -24,7 +22,6 @@ import { OffcanvasManager } from "./managers/OffcanvasManager.js";
 import { TabsManager } from "./managers/TabsManager.js";
 import { AnimationManager } from "./managers/AnimationManager.js";
 
-// Importation des utilitaires
 import {
     properties,
     breakpoints,
@@ -52,7 +49,6 @@ import {
 
 import { FontsConfig, IconsConfig } from "./utils/config.mjs";
 
-// Importation des styles
 import { CarouselStyles } from "./styles/CarouselStyles.js";
 import { DropdownStyles } from "./styles/DropdownStyles.js";
 import { HeaderStyles } from "./styles/HeaderStyles.js";
@@ -63,9 +59,8 @@ import { TooltipStyles } from "./styles/TooltipStyles.js";
 import { TabsStyles } from "./styles/TabsStyles.js";
 import { AnimationStyles } from "./styles/AnimationStyles.js";
 
-// Export par défaut uniquement avec tout regroupé
 export default {
-    // Classe principale
+    // Main class
     Marssel,
 
     // Managers

@@ -2,12 +2,7 @@ import { escapeValue } from "./helpers.js";
 import { CLASS_REGEX, REGEX_PATTERNS } from "./constants.js";
 import { LRUCache } from "./LRUCache.js";
 
-// Cache pour les regex compilées
-// const PART_REGEX =
-//     /^(?:(?:m--)?([a-z0-9]+(?:--[a-z0-9]+)*)--)?([a-z0-9-]+)-\[(.*?)\](?:-([a-z-_]+(?:-[a-z-_]+)*))?(!)?$/;
 const GUTTER_REGEX = /^([\d.]+)(px|em|rem|%|pc)$/;
-
-// Cache pour les résultats de parsing
 const parseCache = new LRUCache(500);
 const classNameCache = new LRUCache(300);
 
@@ -26,16 +21,15 @@ const getResultObject = () => {
 };
 
 /**
- * Construit le nom de classe final de manière optimisée
+ * Construct the final class name in an optimized way.
  */
 export const buildFinalClassName = (
     breakpoints,
     property,
     value,
     pseudoModifiers,
-    isImportant = false
+    isImportant = false,
 ) => {
-    // Crée une clé de cache unique incluant isImportant
     const cacheKey = `${breakpoints.join("--")}|${property}|${value}|${
         pseudoModifiers || ""
     }|${isImportant}`;
@@ -55,18 +49,16 @@ export const buildFinalClassName = (
         className += `:${pseudoModifiers}`;
     }
 
-    // Ajouter le ! pour important (échappé pour CSS)
     if (isImportant) {
         className += "\\!";
     }
 
-    // Met en cache le résultat
     classNameCache.set(cacheKey, className);
     return className;
 };
 
 /**
- * Parse un nom de classe CSS avec validation et cache
+ * Parse a CSS class name with validation and caching
  */
 export const parseClassName = (className) => {
     if (!className || typeof className !== "string") return null;
@@ -98,8 +90,6 @@ export const parseClassName = (className) => {
 
     const bpList = breakpoints ? breakpoints.split("--").filter(Boolean) : [];
     const isImportant = Boolean(important);
-
-    // Réutiliser un objet du pool au lieu d'en créer un nouveau
     const result = getResultObject();
     result.component = component || null;
     result.breakpoints = bpList;
@@ -113,7 +103,7 @@ export const parseClassName = (className) => {
         property,
         value,
         pseudoModifiers,
-        isImportant
+        isImportant,
     );
 
     parseCache.set(className, result);
@@ -121,14 +111,13 @@ export const parseClassName = (className) => {
 };
 
 /**
- * Parse une partie de classe CSS pour un composant spécifique
+ * Parses a portion of a CSS class for a specific component
  */
 export const parseClassPart = (component, styleClass) => {
     if (!component || !styleClass || typeof styleClass !== "string") {
         return null;
     }
 
-    // Crée une clé de cache unique pour la combinaison composant/classe
     const cacheKey = `${component}:${styleClass}`;
 
     if (parseCache.has(cacheKey)) {
@@ -144,7 +133,6 @@ export const parseClassPart = (component, styleClass) => {
     const [, breakpoints, property, value, pseudoModifiers, important] = match;
     const isImportant = Boolean(important);
 
-    // Validation des données extraites
     if (!property || !value) {
         parseCache.set(cacheKey, null);
         return null;
@@ -167,24 +155,22 @@ export const parseClassPart = (component, styleClass) => {
             property,
             value,
             pseudoModifiers,
-            isImportant
+            isImportant,
         ),
     };
 
-    // Met en cache le résultat
     parseCache.set(cacheKey, result);
     return result;
 };
 
 /**
- * Parse une valeur de gouttière avec validation améliorée
+ * Parse a gutter value with improved validation
  */
 export const parseGutterValue = (value) => {
     if (!value || typeof value !== "string") {
         return null;
     }
 
-    // ✅ MODIFIÉ : Accepter directement % au lieu de pc
     const match = value.match(/^([\d.]+)(px|em|rem|%)$/);
     if (!match) {
         return null;
@@ -198,18 +184,18 @@ export const parseGutterValue = (value) => {
     }
 
     const halfValue = parsedValue / 2;
-    return `${halfValue}${unit}`; // ✅ Plus de conversion pc->%
+    return `${halfValue}${unit}`;
 };
 
 /**
- * Valide si un nom de classe respecte le format attendu
+ * Valid if a class name conforms to the expected format
  */
 export const isValidClassName = (className) => {
     return typeof className === "string" && CLASS_REGEX.test(className);
 };
 
 /**
- * Extrait tous les breakpoints d'un nom de classe
+ * Extracts all breakpoints from a class name
  */
 export const extractBreakpoints = (className) => {
     const parsed = parseClassName(className);
@@ -217,7 +203,7 @@ export const extractBreakpoints = (className) => {
 };
 
 /**
- * Extrait la propriété CSS d'un nom de classe
+ * Extracts the CSS property from a class name
  */
 export const extractProperty = (className) => {
     const parsed = parseClassName(className);
@@ -225,7 +211,7 @@ export const extractProperty = (className) => {
 };
 
 /**
- * Extrait la valeur d'un nom de classe
+ * Extracts the value of a class name
  */
 export const extractValue = (className) => {
     const parsed = parseClassName(className);
@@ -233,7 +219,7 @@ export const extractValue = (className) => {
 };
 
 /**
- * Vérifie si un nom de classe a des pseudo-modificateurs
+ * Checks if a class name has pseudo-modifiers
  */
 export const hasPseudoModifiers = (className) => {
     const parsed = parseClassName(className);
@@ -241,7 +227,7 @@ export const hasPseudoModifiers = (className) => {
 };
 
 /**
- * Vérifie si un nom de classe est marqué comme important
+ * Check if a class name is marked as important
  */
 export const isImportant = (className) => {
     const parsed = parseClassName(className);
@@ -249,7 +235,7 @@ export const isImportant = (className) => {
 };
 
 /**
- * Extrait les modificateurs d'importance (!important) d'un nom de classe
+ * Extracts the importance modifiers (!important) from a class name
  */
 export const extractImportance = (className) => {
     const parsed = parseClassName(className);
@@ -266,15 +252,15 @@ export const normalizeClassName = (className) => {
 
     return className
         .trim()
-        .replace(/\s+/g, " ") // Normalise les espaces multiples
-        .replace(/[^\w\-\[\]\\():,.#%\s!]/g, "") // Supprime les caractères non autorisés (inclut !)
+        .replace(/\s+/g, " ")
+        .replace(/[^\w\-\[\]\\():,.#%\s!/]/g, "")
         .split(" ")
         .filter((cls) => cls.length > 0)
         .join(" ");
 };
 
 /**
- * Crée une version importante d'un nom de classe
+ * Creates an important version of a class name
  */
 export const makeImportant = (className) => {
     if (!className || typeof className !== "string") {
@@ -287,21 +273,20 @@ export const makeImportant = (className) => {
     }
 
     if (parsed.isImportant) {
-        return className; // Déjà important
+        return className;
     }
 
-    // Reconstruit le nom de classe avec !important
     return buildFinalClassName(
         parsed.breakpoints,
         parsed.property,
         parsed.value,
         parsed.pseudoModifiers,
-        true
+        true,
     );
 };
 
 /**
- * Supprime l'indicateur !important d'un nom de classe
+ * Removes the !important flag from a class name
  */
 export const removeImportant = (className) => {
     if (!className || typeof className !== "string") {
@@ -314,27 +299,25 @@ export const removeImportant = (className) => {
     }
 
     if (!parsed.isImportant) {
-        return className; // Pas important
+        return className;
     }
 
-    // Reconstruit le nom de classe sans !important
     return buildFinalClassName(
         parsed.breakpoints,
         parsed.property,
         parsed.value,
         parsed.pseudoModifiers,
-        false
+        false,
     );
 };
 
 /**
- * Parse une classe avec gestion avancée des modificateurs important
+ * Parse a class with advanced handling of important modifiers
  */
 export const parseClassWithImportance = (className, forceImportant = false) => {
     const parsed = parseClassName(className);
     if (!parsed) return null;
 
-    // Si forceImportant est true, marque comme important même si pas dans le nom de classe
     if (forceImportant && !parsed.isImportant) {
         return {
             ...parsed,
@@ -344,7 +327,7 @@ export const parseClassWithImportance = (className, forceImportant = false) => {
                 parsed.property,
                 parsed.value,
                 parsed.pseudoModifiers,
-                true
+                true,
             ),
         };
     }
@@ -353,7 +336,7 @@ export const parseClassWithImportance = (className, forceImportant = false) => {
 };
 
 /**
- * Optimise les performances en nettoyant les caches périodiquement
+ * Optimize performance by periodically clearing caches
  */
 export const clearParseCache = () => {
     parseCache.clear();
@@ -361,29 +344,28 @@ export const clearParseCache = () => {
 };
 
 /**
- * Obtient les statistiques du cache pour le debugging
+ * Retrieves cache statistics for debugging
  */
 export const getCacheStats = () => {
     return {
         parseCache: {
             size: parseCache.size,
-            maxSize: 1000, // Limite recommandée
+            maxSize: 1000,
         },
         classNameCache: {
             size: classNameCache.size,
-            maxSize: 500, // Limite recommandée
+            maxSize: 500,
         },
     };
 };
 
 /**
- * Nettoie automatiquement le cache s'il devient trop volumineux
+ * Automatically cleans the cache if it becomes too large
  */
 const autoCleanCache = () => {
     if (parseCache.size > 1000) {
         const entries = Array.from(parseCache.entries());
         parseCache.clear();
-        // Garder les 700 plus récents (pas 500)
         entries.slice(-700).forEach(([k, v]) => parseCache.set(k, v));
     }
 
@@ -394,11 +376,9 @@ const autoCleanCache = () => {
     }
 };
 
-// Auto-nettoyage périodique (toutes les 100 nouvelles entrées)
 export const parseRGBValue = (value) => {
     return value.replace(/_/g, ", ");
 };
-
 export const parseRGBAValue = (value) => {
     const parts = value.split(/_/);
     if (parts.length === 4) {

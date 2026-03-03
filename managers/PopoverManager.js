@@ -7,27 +7,18 @@ export class PopoverManager {
         this.activePopover = null;
         this.popovers = new LRUCache(50);
         this.popoverStyles = new PopoverStyles(marssel.styleManager);
-
-        // Cache DOM elements
         this.documentElement = document.documentElement;
-
-        // Bind methods to preserve context
         this.handleOutsideClick = this.handleOutsideClick.bind(this);
         this.handleTriggerClick = this.handleTriggerClick.bind(this);
     }
 
     init() {
-        // Early return with cached query
         const triggers = document.querySelectorAll("[data-popover-trigger]");
         if (!triggers.length) return;
 
-        // Add default styles once
         this.popoverStyles.initializeStyles();
-
-        // Process all triggers
         this.setupTriggers(triggers);
 
-        // Single event listener for outside clicks (event delegation)
         document.addEventListener("click", this.handleOutsideClick, {
             passive: true,
         });
@@ -48,10 +39,8 @@ export class PopoverManager {
         const direction =
             element.getAttribute("data-popover-direction") || "bottom";
 
-        // Add direction class
         element.classList.add(`popover-${direction}`);
 
-        // Store popover data
         const popoverData = {
             trigger,
             element,
@@ -60,7 +49,6 @@ export class PopoverManager {
 
         this.popovers.set(trigger, popoverData);
 
-        // Add optimized event listener
         trigger.addEventListener("click", this.handleTriggerClick, {
             passive: false,
         });
@@ -88,12 +76,10 @@ export class PopoverManager {
         const popoverData = this.popovers.get(trigger);
         if (!popoverData) return;
 
-        // Close different active popover
         if (this.activePopover && this.activePopover !== popoverData) {
             this.closeActivePopover();
         }
 
-        // Toggle current popover
         if (this.activePopover === popoverData) {
             this.closeActivePopover();
         } else {
@@ -104,10 +90,8 @@ export class PopoverManager {
     openPopover(popoverData) {
         const { trigger, element, direction } = popoverData;
 
-        // Position first, then show (prevents layout thrashing)
         this.positionPopover(trigger, element, direction);
 
-        // Use requestAnimationFrame for smooth animation
         requestAnimationFrame(() => {
             element.classList.add("popover-visible");
         });
@@ -123,11 +107,8 @@ export class PopoverManager {
     }
 
     positionPopover(trigger, popover, direction) {
-        // Cache rectangles calculation
         const triggerRect = trigger.getBoundingClientRect();
         const popoverRect = popover.getBoundingClientRect();
-
-        // Cache window dimensions
         const windowWidth = window.innerWidth;
         const windowHeight = window.innerHeight;
 
@@ -139,7 +120,6 @@ export class PopoverManager {
             windowHeight
         );
 
-        // Batch DOM updates
         this.applyPosition(popover, position);
     }
 
@@ -150,7 +130,7 @@ export class PopoverManager {
         windowWidth,
         windowHeight
     ) {
-        const offset = 10; // Magic number extracted as constant
+        const offset = 10;
         const positions = {
             bottom: {
                 left:
@@ -180,7 +160,6 @@ export class PopoverManager {
 
         let { left, top } = positions[direction] || positions.bottom;
 
-        // Apply boundary constraints
         left = Math.max(
             offset,
             Math.min(left, windowWidth - popoverRect.width - offset)
@@ -194,7 +173,6 @@ export class PopoverManager {
     }
 
     applyPosition(popover, { left, top }) {
-        // Batch style updates
         Object.assign(popover.style, {
             position: "fixed",
             left: `${left}px`,
@@ -202,11 +180,9 @@ export class PopoverManager {
         });
     }
 
-    // Cleanup method for better memory management
     destroy() {
         document.removeEventListener("click", this.handleOutsideClick);
 
-        // Clean up all trigger listeners
         this.popovers.forEach(({ trigger }) => {
             trigger.removeEventListener("click", this.handleTriggerClick);
         });

@@ -1,13 +1,12 @@
 /**
- * Version centralisée de Marssel
+ * Centralized version of Marssel
  *
- * ⚠️ IMPORTANT : Ce fichier doit être mis à jour à chaque nouvelle version du package
- * La version doit correspondre exactement à celle du package.json
- *
- * Cette valeur est utilisée pour :
- * - Le cache des styles (StyleManager.STORAGE_VERSION)
- * - Le cache persistant (StyleCache.version)
- * - Invalider les caches lors des mises à jour
+ * ⚠️ IMPORTANT: This file must be updated with each new version of the package.
+ * The version must exactly match the one in package.json.
+ * This value is used for:
+ * - The style cache (StyleManager.STORAGE_VERSION)
+ * - The persistent cache (StyleCache.version)
+ * - Invalidating the caches during updates
  */
 
-export const MARSSEL_VERSION = "0.10.2";
+export const MARSSEL_VERSION = "0.10.4";

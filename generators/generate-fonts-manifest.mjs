@@ -1,7 +1,7 @@
-// # Commande de base
+// # Basic command
 // node node_modules/@marssel-vb/marssel/generators/generate-fonts-manifest.mjs
 
-// # Avec options personnalisées
+// # With custom options
 // node node_modules/@marssel-vb/marssel/generators/generate-fonts-manifest.mjs --fonts public/fonts --manifest public/js/fonts-manifest.json --pretty
 
 //node generate-fonts-manifest.mjs
@@ -178,20 +178,20 @@ function buildManifest(files, config) {
 function generateManifest() {
     try {
         const config = resolveConfig();
-        console.log("📁 Dossier des polices :", config.fontsDir);
-        console.log("📄 Chemin du manifest :", config.manifestPath);
+        console.log("📁 Fonts folder :", config.fontsDir);
+        console.log("📄 Manifest path :", config.manifestPath);
 
         ensureDirs(config);
         const fontFiles = getFontFiles(config.fontsDir);
-        console.log(`🔍 ${fontFiles.length} fichier(s) trouvé(s)`);
+        console.log(`🔍 ${fontFiles.length} file(s) found`);
 
         const manifest = buildManifest(fontFiles, config);
         const json = JSON.stringify(manifest, null, config.pretty ? 2 : 0);
 
         fs.writeFileSync(config.manifestPath, json);
-        console.log("✅ Manifest généré avec succès.");
+        console.log("✅ Manifest generated successfully.");
     } catch (err) {
-        console.error("❌ Erreur :", err.message);
+        console.error("❌ Error :", err.message);
         process.exit(1);
     }
 }

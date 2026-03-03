@@ -1,5 +1,4 @@
 export class TabsStyles {
-    // Configuration centralisée pour les styles de base (comme dans PopoverStyles)
     static BASE_CONFIG = {
         radio: {
             selector: ".tab-radio",
@@ -40,7 +39,7 @@ export class TabsStyles {
     }
 
     /**
-     * Enregistre les styles de base pour tous les tabs
+     * Saves the basic styles for all tabs
      */
     registerBaseStyles() {
         Object.values(TabsStyles.BASE_CONFIG).forEach((config) => {
@@ -51,7 +50,7 @@ export class TabsStyles {
     }
 
     /**
-     * Méthode utilitaire pour ajouter des styles (calquée sur OffcanvasStyles/PopoverStyles)
+     * Utility method for adding styles (modeled after OffcanvasStyles/PopoverStyles)
      * @param {string} selector
      * @param {string[]} declarations
      * @param {string[]} mediaQueries
@@ -65,7 +64,7 @@ export class TabsStyles {
     }
 
     /**
-     * Applique les styles spécifiques à un groupe de tabs
+     * Applies specific styles to a group of tabs
      */
     applyGroupStyles(tabGroup) {
         const { id, tabs, config, container } = tabGroup;

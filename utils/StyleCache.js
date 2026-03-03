@@ -1,6 +1,6 @@
 /**
- * StyleCache - Gestionnaire de cache persistant pour les styles Marssel
- * Permet de conserver les styles générés entre les navigations de pages
+ * StyleCache - Persistent cache manager for Marshall styles
+ * Allows you to retain generated styles between page navigations
  */
 import { MARSSEL_VERSION } from "./version.js";
 
@@ -14,7 +14,7 @@ export class StyleCache {
     }
 
     /**
-     * Vérifie si localStorage est disponible
+     * Check if localStorage is available
      */
     checkStorageAvailability() {
         try {
@@ -29,7 +29,7 @@ export class StyleCache {
     }
 
     /**
-     * Convertit les Map et Set en objets sérialisables
+     * Converts Maps and Sets into serializable objects
      */
     serializeStyleData(selectorDeclarations) {
         const serialized = {};
@@ -52,7 +52,7 @@ export class StyleCache {
     }
 
     /**
-     * Reconvertit les objets en Map et Set
+     * Converts objects back into Maps and Sets
      */
     deserializeStyleData(serialized) {
         const selectorDeclarations = new Map();
@@ -75,12 +75,11 @@ export class StyleCache {
     }
 
     /**
-     * Compression simple des données (optionnelle)
+     * Simple data compression (optional)
      */
     compress(data) {
         if (!this.compressionEnabled) return data;
 
-        // Compression basique: suppression des espaces inutiles
         return data
             .replace(/\s*:\s*/g, ":")
             .replace(/\s*;\s*/g, ";")
@@ -90,7 +89,7 @@ export class StyleCache {
     }
 
     /**
-     * Sauvegarde les styles dans localStorage
+     * Saves styles to localStorage
      */
     save(selectorDeclarations, metadata = {}) {
         if (!this.enabled) return false;
@@ -112,9 +111,7 @@ export class StyleCache {
 
             // Vérifier la taille
             if (finalData.length > this.maxCacheSize) {
-                console.warn(
-                    "⚠️ Cache trop volumineux, nettoyage des anciennes entrées",
-                );
+                console.warn("⚠️ Cache too bulky, cleaning of old entrances");
                 this.cleanup();
                 return false;
             }
@@ -122,12 +119,11 @@ export class StyleCache {
             localStorage.setItem(this.storageKey, finalData);
 
             console.log(
-                `✅ Cache sauvegardé: ${cacheData.classCount} classes, ${(finalData.length / 1024).toFixed(2)} KB`,
+                `✅ Saved cache: ${cacheData.classCount} classes, ${(finalData.length / 1024).toFixed(2)} KB`,
             );
             return true;
         } catch (e) {
-            console.error("❌ Erreur sauvegarde cache:", e);
-            // Si quota dépassé, nettoyer et réessayer
+            console.error("❌ Error saving cache:", e);
             if (e.name === "QuotaExceededError") {
                 this.cleanup();
             }
@@ -136,7 +132,7 @@ export class StyleCache {
     }
 
     /**
-     * Charge les styles depuis localStorage
+     * Load styles from localStorage
      */
     load() {
         if (!this.enabled) return null;
@@ -147,18 +143,16 @@ export class StyleCache {
 
             const cacheData = JSON.parse(cached);
 
-            // Vérifier la version
             if (cacheData.version !== this.version) {
-                console.log("🔄 Version du cache obsolète, régénération");
+                console.log("🔄 Outdated cache version, regeneration");
                 this.clear();
                 return null;
             }
-
-            // Vérifier l'âge du cache (optionnel: 24h max)
+=
             const age = Date.now() - cacheData.timestamp;
-            const maxAge = 24 * 60 * 60 * 1000; // 24 heures
+            const maxAge = 24 * 60 * 60 * 1000;
             if (age > maxAge) {
-                console.log("🕐 Cache expiré, régénération");
+                console.log("🕐 Cache expired, regenerating");
                 this.clear();
                 return null;
             }
@@ -168,7 +162,7 @@ export class StyleCache {
             );
 
             console.log(
-                `📦 Cache chargé: ${cacheData.classCount} classes depuis ${cacheData.url}`,
+                `📦 Cache loaded: ${cacheData.classCount} classes from ${cacheData.url}`,
             );
 
             return {
@@ -177,14 +171,14 @@ export class StyleCache {
                 timestamp: cacheData.timestamp,
             };
         } catch (e) {
-            console.error("❌ Erreur chargement cache:", e);
+            console.error("❌ Error loading cache:", e);
             this.clear();
             return null;
         }
     }
 
     /**
-     * Fusionne les nouvelles déclarations avec celles en cache
+     * Merges new statements with those in the cache
      */
     merge(existingDeclarations, newDeclarations) {
         const merged = new Map(existingDeclarations);
@@ -192,11 +186,9 @@ export class StyleCache {
         newDeclarations.forEach((value, key) => {
             if (merged.has(key)) {
                 if (value instanceof Map) {
-                    // Fusion de media queries
                     const existingMedia = merged.get(key);
                     value.forEach((declarations, selector) => {
                         if (existingMedia.has(selector)) {
-                            // Fusionner les déclarations
                             const existingDecl = existingMedia.get(selector);
                             declarations.forEach((decl) =>
                                 existingDecl.add(decl),
@@ -206,12 +198,10 @@ export class StyleCache {
                         }
                     });
                 } else if (value instanceof Set) {
-                    // Fusion de sélecteurs normaux
                     const existing = merged.get(key);
                     value.forEach((decl) => existing.add(decl));
                 }
             } else {
-                // Nouvelle entrée
                 if (value instanceof Map) {
                     const newMap = new Map();
                     value.forEach((declarations, selector) => {
@@ -228,7 +218,7 @@ export class StyleCache {
     }
 
     /**
-     * Compte le nombre de classes dans les déclarations
+     * Count the number of classes in the declarations
      */
     countClasses(selectorDeclarations) {
         let count = 0;
@@ -243,37 +233,37 @@ export class StyleCache {
     }
 
     /**
-     * Nettoie le cache
+     * Clear the cache
      */
     cleanup() {
         if (!this.enabled) return;
 
         try {
-            // Pour l'instant, on supprime tout simplement
-            // Dans une version plus avancée, on pourrait garder les entrées les plus utilisées
+            // For now, we're simply deleting everything.
+            // In a more advanced version, we could keep the most frequently used entries.
             this.clear();
-            console.log("🧹 Cache nettoyé");
+            console.log("🧹 Cache cleaned up");
         } catch (e) {
-            console.error("❌ Erreur nettoyage cache:", e);
+            console.error("❌ Error cleaning up cache:", e);
         }
     }
 
     /**
-     * Supprime complètement le cache
+     * Completely remove the cache
      */
     clear() {
         if (!this.enabled) return;
 
         try {
             localStorage.removeItem(this.storageKey);
-            console.log("🗑️ Cache supprimé");
+            console.log("🗑️ Cache deleted");
         } catch (e) {
-            console.error("❌ Erreur suppression cache:", e);
+            console.error("❌ Error deleting cache:", e);
         }
     }
 
     /**
-     * Obtient des statistiques sur le cache
+     * Gets cache statistics
      */
     getStats() {
         if (!this.enabled) {

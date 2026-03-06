@@ -2,7 +2,29 @@
 
 Ce document liste les changements notables, les correctifs et les nouvelles fonctionnalités introduites dans la librairie **marssel-npm**.
 
-## Version v0.10.4 - 04/03/2026 (Actuelle)
+## Version v0.10.6 - 06/03/2026 (Actuelle)
+
+### 🐛 Corrections de Bugs (Bug Fixes)
+
+- **`core/Marssel.js` — Fix du FOUC sur le header et le footer** : Correction d'un bug d'affichage visuel (Flash of Unstyled Content) où le `header` et le `footer` apparaissaient brièvement sans styles au chargement de la page. Le problème venait du fait que `processCriticalElementsFirst()` appelait `updateStyles()` (asynchrone via `requestAnimationFrame`), ce qui retardait l'injection des styles critiques dans le DOM. La méthode est désormais remplacée par `updateStylesSync()` pour garantir une injection immédiate et synchrone des styles des éléments critiques avant que `marssel-ready` ne soit appliqué sur le `body`.
+- **`core/Marssel.js` — Garantie de styles prêts avant révélation du body** : Ajout d'un appel à `updateStylesSync()` juste avant le double `requestAnimationFrame` qui ajoute la classe `marssel-ready`. Cela garantit que tous les styles critiques sont présents dans la feuille de style au moment où le body devient visible, éliminant tout flash visuel résiduel.
+
+### 📚 Documentation
+
+- **Guide d'installation** : Ajout du bloc CSS recommandé pour prévenir le FOUC spécifiquement sur le `header` et le `footer` via les règles `body:not(.marssel-ready) header / footer`.
+
+---
+
+## Version v0.10.5 - 04/03/2026
+
+### 🐛 Corrections de Bugs (Bug Fixes)
+
+- **`helpers.js`** : Correction de l'échappement du caractère barre oblique (`/`) dans la fonction `escapeValue`. Le `/` est désormais correctement échappé en `\/` uniquement dans la valeur entre crochets, sans affecter le reste du sélecteur CSS. Cela permet l'utilisation de classes telles que `grid-column-[1/-1]` sans casser les autres styles.
+- **`parsed.js`** : Le caractère `/` est également autorisé dans `normalizeClassName` pour que la classe ne soit pas filtrée avant d'atteindre le parser.
+
+---
+
+## Version v0.10.4 - 04/03/2026
 
 ### 🐛 Corrections de Bugs (Bug Fixes)
 

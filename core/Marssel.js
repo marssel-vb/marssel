@@ -136,6 +136,7 @@ export class Marssel {
             this.styleManager.addDefaultStyles();
             this.preprocessAllCompactClasses();
             await this.processCriticalElementsFirst();
+
             this.domManager.processVisibleElementsFirst();
 
             this.headerManager.init();
@@ -143,6 +144,7 @@ export class Marssel {
             this.toastManager.init();
             this.domManager.processAllElements();
 
+            this.styleManager.updateStylesSync();
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
                     document.body.classList.add("marssel-ready");
@@ -263,7 +265,7 @@ export class Marssel {
 
                 if (processed === total) {
                     this.domManager.processPendingClasses();
-                    this.styleManager.updateStyles();
+                    this.styleManager.updateStylesSync();
 
                     requestAnimationFrame(() => {
                         resolve();

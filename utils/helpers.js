@@ -227,6 +227,7 @@ export const escapeValue = (value) => {
             .replace(/,/g, "\\,")
             .replace(/\./g, "\\.")
             //.replace(/\//g, "\\/")
+            .replace(/\//g, "\\/")
             .replace(/_/g, "\\_")
     );
 };

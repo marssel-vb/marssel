@@ -1,4 +1,5 @@
 //node .\generators\generate-svg.mjs
+//node .\generators\generate-svg.mjs --onlynew
 import fs from "fs";
 import https from "https";
 import { promisify } from "util";
@@ -225,6 +226,8 @@ const ICONS_LIST = [
     "spinner-ball",
     "gauge",
     "share-network",
+    "warning",
+    "x-circle",
 ];
 
 // Declarations for the --onlynew mode (avoids duplicates)

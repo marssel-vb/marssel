@@ -2,7 +2,15 @@
 
 Ce document liste les changements notables, les correctifs et les nouvelles fonctionnalités introduites dans la librairie **marssel-npm**.
 
-## Version v0.10.6 - 06/03/2026 (Actuelle)
+## Version 1.0.0 - 10/03/2026 (Actuelle)
+
+### 🚀 Première version publique
+
+- Publication officielle sur npm sous `@marssel-vb/marssel`
+
+---
+
+## Version v0.10.6 - 06/03/2026
 
 ### 🐛 Corrections de Bugs (Bug Fixes)
 

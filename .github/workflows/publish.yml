@@ -1,8 +1,9 @@
 name: Publish to npm
 
 on:
+    workflow_dispatch: # Ajoute ceci pour avoir un bouton "Run workflow"
     release:
-        types: [created] # Se déclenche quand tu crées une Release sur GitHub
+        types: [created]
 
 jobs:
     publish:

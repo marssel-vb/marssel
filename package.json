@@ -8,7 +8,7 @@
         "registry": "https://registry.npmjs.org/",
         "access": "public"
     },
-    "version": "1.0.5",
+    "version": "1.0.6",
     "description": "A modern CSS-in-JS framework that generates instant styles with zero configuration. No build step required, featuring intuitive classes based on standard CSS properties, and including built-in JS components.",
     "main": "dist/marssel.cjs.js",
     "module": "dist/marssel.esm.js",

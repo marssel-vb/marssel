@@ -2,9 +2,13 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/@marssel-vb/marssel"><img src="https://img.shields.io/npm/v/@marssel-vb/marssel?color=3b82f6&label=npm" alt="npm version" /></a>
-  <a href="https://www.npmjs.com/package/@marssel-vb/marssel"><img src="https://img.shields.io/npm/dm/@marssel-vb/marssel?color=8b5cf6" alt="npm downloads" /></a>
-  <a href="https://github.com/marssel-vb/marssel/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/@marssel-vb/marssel?color=f97316" alt="license" /></a>
-  <a href="https://github.com/marssel-vb/marssel/issues"><img src="https://img.shields.io/github/issues/marssel-vb/marssel" alt="open issues" /></a>
+
+<a href="https://www.npmjs.com/package/@marssel-vb/marssel"><img src="https://img.shields.io/npm/dt/@marssel-vb/marssel?color=8b5cf6&label=downloads" alt="npm downloads" /></a>
+
+<a href="https://github.com/marssel-vb/marssel/blob/main/LICENSE"><img src="https://img.shields.io/github/license/marssel-vb/marssel?color=f97316" alt="license" /></a>
+
+<a href="https://github.com/marssel-vb/marssel/issues"><img src="https://img.shields.io/github/issues/marssel-vb/marssel" alt="open issues" /></a>
+
 </p>
 
 A modern, high-performance CSS-in-JS framework for quickly building elegant and interactive web interfaces.

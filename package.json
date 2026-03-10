@@ -8,8 +8,8 @@
         "registry": "https://registry.npmjs.org/",
         "access": "public"
     },
-    "version": "1.0.4",
-    "description": "Framework CSS-in-JS moderne générant du style instantané sans configuration. Zéro build step, classes intuitives basées sur les propriétés CSS standard, incluant des composants JS.",
+    "version": "1.0.5",
+    "description": "A modern CSS-in-JS framework that generates instant styles with zero configuration. No build step required, featuring intuitive classes based on standard CSS properties, and including built-in JS components.",
     "main": "dist/marssel.cjs.js",
     "module": "dist/marssel.esm.js",
     "browser": "dist/marssel.umd.js",

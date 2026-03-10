@@ -9,4 +9,4 @@
  * - Invalidating the caches during updates
  */
 
-export const MARSSEL_VERSION = "1.0.1";
+export const MARSSEL_VERSION = "1.0.2";

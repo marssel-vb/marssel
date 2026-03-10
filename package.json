@@ -5,7 +5,8 @@
         "url": "git+https://github.com/marssel-vb/marssel.git"
     },
     "publishConfig": {
-        "registry": "https://npm.pkg.github.com/"
+        "registry": "https://registry.npmjs.org/",
+        "access": "public"
     },
     "version": "1.0.0",
     "description": "Framework CSS-in-JS moderne générant du style instantané sans configuration. Zéro build step, classes intuitives basées sur les propriétés CSS standard, incluant des composants JS.",

@@ -14,7 +14,7 @@ export class ModalManager {
         this.overlay = document.getElementById("modal-overlay");
 
         if (!this.overlay) {
-            console.warn("Modal overlay element not found");
+            // console.warn("Modal overlay element not found");
             return;
         }
 

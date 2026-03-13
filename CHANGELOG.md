@@ -2,7 +2,15 @@
 
 Ce document liste les changements notables, les correctifs et les nouvelles fonctionnalités introduites dans la librairie **marssel-npm**.
 
-## Version 1.0.6 - 11/03/2026 (Actuelle)
+## Version 1.0.8 - 13/03/2026 (Actuelle)
+
+### 🐛 Corrections de Bugs (Bug Fixes)
+
+- **`managers/ModalManager.js` — Suppression du warning "Modal overlay element not found"** : Le `console.warn` émis lors de l'initialisation du `ModalManager` sur des pages ne contenant pas d'élément `#modal-overlay` a été supprimé. Ce comportement étant attendu sur certaines pages, l'absence de l'overlay n'est plus considérée comme une anomalie et le manager s'arrête silencieusement.
+
+---
+
+## Version 1.0.6 - 11/03/2026
 
 ### 📚 Documentation
 

@@ -2,7 +2,55 @@
 
 Ce document liste les changements notables, les correctifs et les nouvelles fonctionnalités introduites dans la librairie **marssel-npm**.
 
-## Version 1.0.0 - 10/03/2026 (Actuelle)
+## Version 1.0.6 - 11/03/2026 (Actuelle)
+
+### 📚 Documentation
+
+- **README** : Modification du fichier README.
+
+---
+
+## Version 1.0.5 - 11/03/2026
+
+### 📚 Documentation
+
+- **README** : Modification du fichier README.
+
+---
+
+## Version 1.0.4 - 11/03/2026
+
+### 🔧 CI/CD
+
+- **`publish.yml`** : Modification du workflow de publication GitHub Actions.
+
+---
+
+## Version 1.0.3 - 11/03/2026
+
+### 🔧 CI/CD
+
+- **`publish.yml`** : Création du fichier de workflow `.github/workflows/publish.yml` pour automatiser la publication sur npm.
+
+---
+
+## Version 1.0.2 - 11/03/2026
+
+### 🔧 CI/CD
+
+- **Test** : Test de push GitHub vers npmjs.
+
+---
+
+## Version 1.0.1 - 11/03/2026
+
+### 🔧 Configuration
+
+- **`package.json`** : Remplacement du registry GitHub Packages (`https://npm.pkg.github.com/`) par le registry npmjs public (`https://registry.npmjs.org/`) avec accès public.
+
+---
+
+## Version 1.0.0 - 10/03/2026
 
 ### 🚀 Première version publique
 
@@ -174,21 +222,11 @@ Cela garantit que l'invalidation du cache fonctionne correctement lors des mises
 
 ### ✨ Nouvelles Fonctionnalités (Features)
 
-- **Sélecteurs Enfants avec Groupes** : Ajout du support complet pour les sélecteurs enfants dans les groupes de styles avec syntaxe `[styles]>enfant` et `[styles>enfant]`. Permet désormais d'utiliser des patterns complexes comme `[fs-[40px]+c-[green]]>span:hover` ou `lg--[bg-[red]+p-[20px]]>div`.
-- **Support `!important` avec Breakpoints** : Correction et amélioration de la gestion du flag `!important` combiné avec les breakpoints responsives et les sélecteurs enfants (ex: `lg--[fs-[13px]]!>span`, `md--lg--[c-[blue]]!>div:hover`).
-- **Pseudo-classes sur Enfants** : Support complet des pseudo-classes appliquées aux sélecteurs enfants dans tous les contextes (groupes, breakpoints, classes compactes).
-
-### 🔨 Optimisation et Améliorations Internes
-
-- **Refactorisation `DomManager`** : Amélioration significative du routage et de la priorisation du traitement des classes avec sélecteurs enfants dans `processClassOptimized()`.
-- **Nouvelles Méthodes** : Ajout de `processGroupChildAfterBracket()` et amélioration de `processInnerChildSelector()` pour une meilleure gestion des patterns complexes.
-- **Regex Optimisées** : Mise à jour des expressions régulières `BREAKPOINT_ROOT_GROUP`, `CHILD_STYLE_WITH_IMPORTANT` et `GROUP_CHILD_AFTER_BRACKET` pour capturer correctement tous les cas d'utilisation.
+- **Nouveau Manager : `OffcanvasManager`** : Intégration du manager pour la gestion des panneaux offcanvas.
 
 ### 🐛 Corrections de Bugs (Bug Fixes)
 
-- **Flag `!important`** : Correction d'un bug majeur où le flag `!important` générait des règles CSS dupliquées (avec et sans `!important`). Désormais seules les règles avec `!important` sont générées quand le flag est présent.
-- **Breakpoints avec Enfants** : Fix de l'application des breakpoints responsives combinés avec des sélecteurs enfants qui ne généraient aucun style.
-- **Parsing des Pseudo-classes** : Correction de la détection du flag `!important` placé avant les pseudo-classes (pattern `]!:pseudo`).
+- **Corrections diverses** : Multiples correctifs sur les managers existants.
 
 ---
 

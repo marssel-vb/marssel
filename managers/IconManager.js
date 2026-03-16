@@ -11,7 +11,7 @@ export class IconManager {
             xlarge: "48px",
         });
         this.isLoaded = false;
-
+        this.initPromise = null;
         this.iconRegex = /^icon-\\\[([a-z0-9-]+(?:-solid|-duotone)?)\\\]$/i;
         this.colorRegex = /c-\[([\da-f]{3,8})\]/i;
 
@@ -26,27 +26,30 @@ export class IconManager {
 
     async init() {
         if (this.isLoaded) return;
+        if (this.initPromise !== null) return this.initPromise;
 
-        try {
-            const manifestPath = this.marssel.config.paths.iconsManifest;
-            const response = await fetch(manifestPath);
-            if (!response.ok) {
-                throw new Error(
-                    `HTTP ${response.status}: ${response.statusText}`,
+        this.initPromise = (async () => {
+            try {
+                const manifestPath = this.marssel.config.paths.iconsManifest;
+                const response = await fetch(manifestPath);
+                if (!response.ok)
+                    throw new Error(
+                        `HTTP ${response.status}: ${response.statusText}`,
+                    );
+                const iconsData = await response.json();
+                this.icons = new Map(Object.entries(iconsData));
+            } catch (error) {
+                console.warn(
+                    "Manifeste d'icônes non trouvé, utilisation des icônes par défaut",
+                    error,
                 );
+                this.icons = new Map();
+            } finally {
+                this.isLoaded = true;
             }
+        })();
 
-            const iconsData = await response.json();
-            this.icons = new Map(Object.entries(iconsData));
-        } catch (error) {
-            console.warn(
-                "Manifeste d'icônes non trouvé, utilisation des icônes par défaut",
-                error,
-            );
-            this.icons = new Map();
-        } finally {
-            this.isLoaded = true;
-        }
+        return this.initPromise;
     }
 
     parseIconName(className) {

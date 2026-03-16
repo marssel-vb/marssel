@@ -151,8 +151,6 @@ export class Marssel {
                 });
             });
 
-            this.domManager.setupObservers();
-
             const managersToInit = [
                 "carouselManager",
                 "carouselManager",
@@ -178,6 +176,8 @@ export class Marssel {
                         );
                     }
                 });
+
+                this.domManager.setupObservers();
 
                 window.addEventListener("beforeunload", () => {
                     this.styleManager.saveCachedStyles();

@@ -2,7 +2,17 @@
 
 Ce document liste les changements notables, les correctifs et les nouvelles fonctionnalités introduites dans la librairie **marssel-npm**.
 
-## Version 1.0.8 - 13/03/2026 (Actuelle)
+## Version 1.0.9 - 16/03/2026 (Actuelle)
+
+### 🐛 Corrections de Bugs (Bug Fixes)
+
+- **`managers/IconManager.js` — Correction du warning "Icons manifest not loaded yet"** : Ajout d'un `initPromise` dans le constructor et d'un guard dans `init()` pour éviter les doubles appels et garantir que `getIconContent()` n'est jamais invoqué avant la fin du chargement du manifest.
+
+- **`core/Marssel.js` — Déplacement de `setupObservers()` après l'initialisation complète** : Le `MutationObserver` était démarré trop tôt, avant que le manifest des icônes soit chargé. Il est désormais lancé dans le `setTimeout` aux côtés des autres managers, éliminant les appels prématurés à `getIconContent()`.
+
+---
+
+## Version 1.0.8 - 13/03/2026
 
 ### 🐛 Corrections de Bugs (Bug Fixes)
 

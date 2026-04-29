@@ -2,7 +2,15 @@
 
 Ce document liste les changements notables, les correctifs et les nouvelles fonctionnalités introduites dans la librairie **marssel-npm**.
 
-## Version 1.0.9 - 16/03/2026 (Actuelle)
+## Version 1.0.10 - 29/04/2026 (Actuelle)
+
+### 📚 Documentation
+
+- **README** : Modification du fichier README.
+
+---
+
+## Version 1.0.9 - 16/03/2026
 
 ### 🐛 Corrections de Bugs (Bug Fixes)
 

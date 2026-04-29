@@ -2,7 +2,7 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/@marssel-vb/marssel"><img src="https://img.shields.io/npm/v/@marssel-vb/marssel?color=3b82f6&label=npm" alt="npm version" /></a>
-
+  <a href="https://github.com/sponsors/marssel-vb"><img src="https://img.shields.io/badge/sponsor-❤️-ff69b4" alt="sponsor" /></a>
   <img src="https://img.shields.io/badge/license-MIT-f97316" alt="license" />
   <img src="https://img.shields.io/badge/issues-welcome-808080" alt="open issues" />
 </p>
@@ -30,8 +30,8 @@ yarn add @marssel-vb/marssel
 ### 1. Basic import and initialization
 
 ```javascript
-import { MarssellBundle } from "@marssel-vb/marssel";
-const { Marssel } = MarssellBundle;
+import { MarsselBundle } from "@marssel-vb/marssel";
+const { Marssel } = MarsselBundle;
 
 // Initialize Marssel with default configuration
 const app = new Marssel();
@@ -40,8 +40,8 @@ const app = new Marssel();
 ### 2. With custom options
 
 ```javascript
-import { MarssellBundle } from "@marssel-vb/marssel";
-const { Marssel } = MarssellBundle;
+import { MarsselBundle } from "@marssel-vb/marssel";
+const { Marssel } = MarsselBundle;
 
 const app = new Marssel({
     lazyload: true,
@@ -282,7 +282,7 @@ To prevent the flash of unstyled content, add this critical CSS in the `<head>` 
 
 **`app` is undefined after import**
 
-- Double-check the import path and that you are destructuring correctly: `const { Marssel } = MarssellBundle;`
+- Double-check the import path and that you are destructuring correctly: `const { Marssel } = MarsselBundle;`
 
 ## 📦 Project Structure
 
@@ -312,6 +312,14 @@ For full documentation, visit [marssel.dev](https://marssel.dev)
 ## 🐛 Report a Bug
 
 Found a bug? [Open an issue](https://github.com/marssel-vb/marssel/issues)
+
+## ❤️ Support the project
+
+Marssel is a solo-developer project maintained with passion. If this framework saves you time or helps your business, consider supporting its development.
+
+> [!TIP]
+> **[Become a Sponsor on GitHub](https://github.com/sponsors/marssel-vb)**
+> _Your support helps pay for hosting, documentation, and continuous improvements. Thank you!_ 🙏
 
 ## 📄 License
 

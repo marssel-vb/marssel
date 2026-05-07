@@ -2,7 +2,21 @@
 
 Ce document liste les changements notables, les correctifs et les nouvelles fonctionnalités introduites dans la librairie **marssel-npm**.
 
-## Version 1.0.10 - 29/04/2026 (Actuelle)
+## Version 1.0.11 - 07/05/2026 (Actuelle)
+
+### 🐛 Corrections de Bugs (Bug Fixes)
+
+- **`managers/IconManager.js` — Correction de la persistance du bug d'icônes sur Firefox** :
+    - Modification de `createIconStyles()` pour ne plus mettre en cache un `Set` vide si le manifeste n'est pas encore chargé (`isLoaded: false`). Cela permet au système de réessayer de générer l'icône une fois les données reçues au lieu de rester bloqué sur un échec mis en cache.
+    - Suppression du log intempestif "Icons manifest not loaded yet" lors des tentatives de pré-rendu ultra-rapides.
+
+- **`core/Marssel.js` — Sécurisation de la séquence d'initialisation** :
+    - Refonte de la méthode `init()` pour garantir un ordre d'exécution strict : Attente du `DOMContentLoaded` ➔ Chargement complet des manifests (`Promise.all`) ➔ Initialisation des styles ➔ Analyse du DOM.
+    - Déplacement de `preprocessAllCompactClasses()` après la résolution des promesses de ressources pour éliminer toute "race condition" entre l'analyse des classes HTML et l'arrivée du JSON des icônes.
+
+---
+
+## Version 1.0.10 - 29/04/2026
 
 ### 📚 Documentation
 

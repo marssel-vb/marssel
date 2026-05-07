@@ -83,7 +83,6 @@ export class IconManager {
 
     getIconContent(className) {
         if (!this.isLoaded) {
-            console.warn("Icons manifest not loaded yet.");
             return null;
         }
 
@@ -111,17 +110,15 @@ export class IconManager {
     }
 
     createIconStyles(selector, className) {
+        if (!this.isLoaded) return new Set();
+
         const cacheKey = `${selector}-${className}`;
         if (this.styleCache.has(cacheKey)) {
             return this.styleCache.get(cacheKey);
         }
 
         const icon = this.getIconContent(className);
-        if (!icon) {
-            const emptySet = new Set();
-            this.styleCache.set(cacheKey, emptySet);
-            return emptySet;
-        }
+        if (!icon) return new Set();
 
         const color = this.extractColor(className);
         const encodedSvg = encodeURIComponent(icon.svg);

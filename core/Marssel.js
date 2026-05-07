@@ -112,28 +112,21 @@ export class Marssel {
                     );
             }
 
-            this.styleManager.initializeStyleSheet();
-
-            if (document.readyState !== "loading") {
-                await Promise.all([
-                    this.fontManager.init(),
-                    this.iconManager.init(),
-                ]);
-            } else {
-                await new Promise((resolve) => {
-                    document.addEventListener("DOMContentLoaded", async () => {
-                        await Promise.all([
-                            this.fontManager.init(),
-                            this.iconManager.init(),
-                        ]);
-                        resolve();
-                    });
-                });
+            if (document.readyState === "loading") {
+                await new Promise((resolve) =>
+                    document.addEventListener("DOMContentLoaded", resolve),
+                );
             }
 
-            this.themeManager.init(this.config.theme);
+            await Promise.all([
+                this.fontManager.init(),
+                this.iconManager.init(),
+            ]);
 
+            this.styleManager.initializeStyleSheet();
+            this.themeManager.init(this.config.theme);
             this.styleManager.addDefaultStyles();
+
             this.preprocessAllCompactClasses();
             await this.processCriticalElementsFirst();
 
